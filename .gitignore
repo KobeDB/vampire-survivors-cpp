@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+
+# Debug sheisse
+*.pdb
+*.ilk

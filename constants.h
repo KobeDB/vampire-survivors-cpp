@@ -1,0 +1,2 @@
+#define TICKS_PER_SECOND 60
+#define TICK_TIME (1.0f/TICKS_PER_SECOND)
