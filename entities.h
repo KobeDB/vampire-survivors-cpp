@@ -62,8 +62,8 @@ struct Player {
     }
 
     void draw() {
-        // auto corner = pos - dim/2;
-        // DrawRectangle(corner.x, corner.y, dim.x, dim.y, MAGENTA);
+        auto corner = pos - dim/2;
+        DrawRectangleLines(corner.x, corner.y, dim.x, dim.y, MAGENTA);
         animation.draw(pos, facing_dir.x <= 0);
     }
 };

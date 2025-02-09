@@ -117,7 +117,7 @@ struct Pool {
 
     bool is_handle_valid(Pool_Handle<T> handle) const {
         if (handle.index < 0 || handle.index >= slot_count) return false;
-        if (handle.generation == generations[handle.index]) return false;
+        if (handle.generation != generations[handle.index]) return false;
         return true;
     }
 };
