@@ -20,7 +20,7 @@
 struct Level {
     Camera2D                camera {};
     Player                  player {};
-    // Pool<Entity>            enemies{MAX_ENEMIES};
+    Pool<Enemy>             enemies{MAX_ENEMIES};
     // Pool<Damage_Zones>      damage_zones{MAX_DAMAGE_ZONES};
     // Weapon_Pool             weapons{MAX_WEAPONS};
     // Pool<Damage_Indicator>  damage_indicators{MAX_DAMAGE_INDICATORS;
@@ -34,6 +34,8 @@ struct Level {
         camera.target = {player.pos.x, player.pos.y};
         camera.offset = {screen_dim.x / 2, screen_dim.y / 2};
         camera.zoom = 1;
+
+        enemies.add(make_enemy(Bat, player.pos + Vec2{50,50}));
     }
 
     void update_camera() {
@@ -41,9 +43,15 @@ struct Level {
     }
 
     void tick() {
-        player.do_movement();
+        player.tick();
 
         update_camera();
+
+        for( int ei = 0; ei < enemies.capacity(); ++ei) {
+            auto enemy = enemies.get(ei);
+            if (!enemy) { continue; }
+            enemy->tick(player);
+        }
     }
 
     void draw() {
@@ -58,6 +66,12 @@ struct Level {
 
             // Draw entities
             player.draw();
+
+            for(int ei = 0; ei < enemies.capacity(); ++ei) {
+                auto enemy = enemies.get(ei);
+                if (!enemy) { continue; }
+                enemy->draw();
+            }
 
         EndMode2D();
     }

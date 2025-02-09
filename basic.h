@@ -112,6 +112,8 @@ Vec2 normalize(const Vec2 &v) {
     return v * 1.0f/length(v);
 }
 
-
+float dot(const Vec2 &v, const Vec2 &w) {
+    return v.x * w.x + v.y * w.y;
+}
 
 #endif
