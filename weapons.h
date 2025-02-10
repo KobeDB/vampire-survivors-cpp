@@ -65,7 +65,7 @@ struct Whip : public Weapon {
     }
 
     void progress_attack(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) override {
-        auto dz = Pool<Damage_Zone>::get(dz_handle);
+        auto dz = get(dz_handle);
 
         if (on_attack_event) {
             // Set damage zone's position

@@ -21,9 +21,9 @@ struct Level {
     Camera2D                camera {};
     Player                  player {};
     Pool<Enemy>             enemies {MAX_ENEMIES};
-    Pool<Damage_Zone>      damage_zones {MAX_DAMAGE_ZONES};
+    Pool<Damage_Zone>       damage_zones {MAX_DAMAGE_ZONES};
     Whip                    whip {damage_zones};
-    //Arena                   weapons {};
+    //Pool<Weapon_Union>      weapons {MAX_WEAPONS};
     // Pool<Damage_Indicator>  damage_indicators{MAX_DAMAGE_INDICATORS;
     // Pool<XP_Drop>           xp_drops{MAX_XP_DROPS};
     // Wave                    wave{};
@@ -37,9 +37,6 @@ struct Level {
         camera.zoom = 1;
 
         enemies.add(make_enemy(Bat, player.pos + Vec2{50,50}));
-
-        // weapons.init(MAX_WEAPONS, sizeof(Weapon_Union));
-        // weapons.add(Whip{});
 
     }
 

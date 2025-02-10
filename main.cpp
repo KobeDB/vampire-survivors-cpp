@@ -41,7 +41,7 @@ int main() {
     vectors.add({69,420});
     vectors.add({21, 42});
 
-    for(int i = 0; i < vectors.slot_count; ++i) {
+    for(int i = 0; i < vectors.capacity(); ++i) {
         auto v = vectors.get(i);
         if (!v) { continue; }
         printf("vectors[%d]=%f\n", i, v->x);
@@ -49,7 +49,7 @@ int main() {
 
     vectors.free(0);
 
-    for(int i = 0; i < vectors.slot_count; ++i) {
+    for(int i = 0; i < vectors.capacity(); ++i) {
         auto v = vectors.get(i);
         if (!v) { continue; }
         printf("vectors[%d]=%f\n", i, v->x);
