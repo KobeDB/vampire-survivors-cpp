@@ -8,6 +8,9 @@
 
 #include "entities.h"
 
+#define _USE_MATH_DEFINES
+#include <math.h>
+
 struct Damage_Zone {
     Vec2 pos {};
     Vec2 dim {};
@@ -19,7 +22,7 @@ struct Damage_Zone {
     void draw() const {
         if (!is_active) { return; }
         auto corner = pos - dim/2;
-        DrawRectangle( corner.x, corner.y, dim.x, dim.y, color);
+        DrawRectangleLines( corner.x, corner.y, dim.x, dim.y, color);
     }
 };
 
@@ -84,16 +87,50 @@ struct Whip : public Weapon {
     }
 };
 
-// struct Bibles : public Weapon {
-//     int bible_count;
+#define BIBLES_COOLDOWN 200
+#define BIBLES_LIFETIME 500
 
-//     Bibles(int bible_count) : Weapon{69, 420}, bible_count{bible_count} {}
-// };
+struct Bibles : public Weapon {
+    Pool_Handle<Damage_Zone> bibles[10] {};
+    int bible_count;
+
+    float revolutions_per_attack_period = 3;
+    float radius = 100;
+
+    Bibles(int bible_count, Pool<Damage_Zone> &damage_zones) : Weapon{BIBLES_COOLDOWN, BIBLES_LIFETIME}, bible_count{bible_count} {
+        for (int i = 0; i < bible_count; ++i) {
+            Damage_Zone bible {};
+            bible.dim = {50, 75};
+            bible.damage = 30;
+            bible.color = BLUE;
+            bibles[i] = damage_zones.add(bible);
+        }
+    }
+
+    void progress_attack(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) override {
+        for (int i = 0; i < bible_count; ++i) {
+            // Update bible's damage zone
+            Damage_Zone *bible = get(bibles[i]);
+            bible->pos = calc_bible_center(i, player.pos, remaining_ticks);
+            bible->is_active = !is_cooling_down;
+        }
+    }
+
+    Vec2 calc_bible_center(int bible, Vec2 orbit_center, int rem_lifetime) const {
+        float angle_between_bibles = 2 * M_PI / float(bible_count);
+        float anim_progress = float(attack_time-rem_lifetime) / float(attack_time);
+        float angle_offset = revolutions_per_attack_period * 2 * M_PI * anim_progress;
+        float bible_angle = angle_between_bibles * float(bible) + angle_offset;
+        Vec2 bible_center_on_unit_circle = {cosf(bible_angle), sinf(bible_angle)};
+        Vec2 bible_center = bible_center_on_unit_circle * radius + orbit_center;
+        return bible_center;
+    }
+};
 
 // WARNING: don't instantiate this type, this is just for easily getting the biggest sizeof the derived Weapons
 union Weapon_Union {
     Whip whip;
-    //Bibles bibles;
+    Bibles bibles;
     ~Weapon_Union() {} // we never instantiate Weapon_Union, but this is just to satisfy compiler
 };
 

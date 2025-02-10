@@ -38,6 +38,7 @@ struct Level {
         enemies.add(make_enemy(Bat, player.pos + Vec2{50,50}));
 
         weapons.add(Whip{damage_zones});
+        weapons.add(Bibles{3, damage_zones});
     }
 
     void update_camera() {
