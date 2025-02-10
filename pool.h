@@ -30,7 +30,7 @@ struct Raw_Pool {
     Raw_Pool(int p_slot_count, int p_slot_size) {
         slot_count = p_slot_count;
         slot_size = p_slot_size;
-        slots = new unsigned char[slot_count * slot_size];
+        slots = (unsigned char*)malloc(slot_count * slot_size); // use malloc to ensure proper alignment
         free_stack = new int[slot_count]{};
         free_stack_top = 0;
         is_occupied = new bool[slot_count]{};

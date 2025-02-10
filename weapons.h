@@ -3,13 +3,16 @@
 
 #include <string.h>
 #include <stdio.h>
+#define _USE_MATH_DEFINES
+#include <math.h>
+
+#include "constants.h"
 
 #include "raylib.h"
 
 #include "entities.h"
 
-#define _USE_MATH_DEFINES
-#include <math.h>
+#include "array.h"
 
 struct Damage_Zone {
     Vec2 pos {};
@@ -127,10 +130,97 @@ struct Bibles : public Weapon {
     }
 };
 
+struct Projectile {
+    Pool_Handle<Damage_Zone> dz {};
+    int lifetime {};
+    Vec2 velocity {};
+    Vec2 acceleration {};
+    float rotation {};
+    float rotation_speed {};
+    int health = 9999;
+};
+
+struct Projectile_Weapon : public Weapon {
+    Pool<Projectile> projectiles {300};
+    int ticks_until_next_shot {};
+    int pending_shots {};
+
+    // constants
+    int shot_count {};
+    int ticks_between_shots {};
+
+    Projectile_Weapon(int cooldown_time, int shot_count, int ticks_between_shots) : Weapon{cooldown_time, (shot_count-1)*ticks_between_shots}, shot_count{shot_count}, ticks_between_shots{ticks_between_shots} {}
+
+    void progress_attack(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) override {
+        if (on_attack_event) {
+            pending_shots = shot_count;
+        }
+
+        --ticks_until_next_shot;
+
+        if (pending_shots > 0 && ticks_until_next_shot <= 0) {
+            --pending_shots;
+            ticks_until_next_shot = ticks_between_shots;
+            fire_projectiles(player, damage_zones, enemies);
+        }
+
+        for (int i = 0; i < projectiles.capacity(); ++i) {
+            Projectile *proj = projectiles.get(i);
+            if (!proj) { continue; }
+
+            Damage_Zone *dz = get(proj->dz);
+
+            --proj->lifetime;
+            if (proj->lifetime <= 0 || dz->enemy_hit_count >= proj->health ) {
+                // first free the projectile's Damage_Zone
+                free(proj->dz);
+                // free the projectile itself
+                projectiles.free(i);
+                // this projectile is now dead, continue to next one
+                continue;
+            }
+
+            // update projectile's movement
+            proj->velocity += proj->acceleration * TICK_TIME;
+            dz->pos += proj->velocity * TICK_TIME;
+            proj->rotation += proj->rotation_speed * TICK_TIME;
+        }
+
+    }
+
+    virtual void fire_projectiles(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) = 0;
+
+};
+
+#define CROSS_COOLDOWN 200
+#define CROSS_TICKS_BETWEEN_SHOTS 5
+
+struct Cross : public Projectile_Weapon {
+    Cross(Pool<Damage_Zone> &damage_zones) : Projectile_Weapon{CROSS_COOLDOWN, 2, CROSS_TICKS_BETWEEN_SHOTS} {}
+
+    void fire_projectiles(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) override {
+        // Array<Enemy_Distance_Pair> enemy_distances = find_nearest_enemies(player, enemies);
+        // defer (enemy_distances.destroy());
+        // if (false) {}
+    }
+};
+
+struct Enemy_Distance {
+    int enemy_pool_index {};
+    float dist {};
+    float health {};
+};
+
+// // TODO: allocate result on a temp arena allocator somehow
+// Array<Enemy_Distance> find_nearest_enemies(Vec2 player_pos, Pool<Enemy> &enemies) {
+//     return {};
+// }
+
 // WARNING: don't instantiate this type, this is just for easily getting the biggest sizeof the derived Weapons
 union Weapon_Union {
     Whip whip;
     Bibles bibles;
+    Cross cross;
     ~Weapon_Union() {} // we never instantiate Weapon_Union, but this is just to satisfy compiler
 };
 

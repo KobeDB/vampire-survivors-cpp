@@ -1,6 +1,7 @@
 #include <stdio.h>
 
-#include "pool2.h"
+#include "pool.h"
+#include "array.h"
 
 enum Weapon_Type {
     WHIP,
@@ -97,6 +98,17 @@ int main() {
     enemies.add(Enemy{9, 10});
 
     print_enemies(enemies);
+
+    //----------------------------
+
+    Array<Enemy> a{};
+    for (int i = 0; i < 20; ++i) {
+        a.push(Enemy{42, i});
+    }
+    a.push(Enemy{42, 24});
+    for (int i = 0; i < a.size(); ++i) {
+        printf("a[%d]=%d\n", i, a[i].health);
+    }
 
 }
 
