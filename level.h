@@ -22,8 +22,7 @@ struct Level {
     Player                  player {};
     Pool<Enemy>             enemies {MAX_ENEMIES};
     Pool<Damage_Zone>       damage_zones {MAX_DAMAGE_ZONES};
-    Whip                    whip {damage_zones};
-    //Pool<Weapon_Union>      weapons {MAX_WEAPONS};
+    Raw_Pool                weapons {MAX_WEAPONS, sizeof(Weapon_Union)};
     // Pool<Damage_Indicator>  damage_indicators{MAX_DAMAGE_INDICATORS;
     // Pool<XP_Drop>           xp_drops{MAX_XP_DROPS};
     // Wave                    wave{};
@@ -38,6 +37,7 @@ struct Level {
 
         enemies.add(make_enemy(Bat, player.pos + Vec2{50,50}));
 
+        weapons.add(Whip{damage_zones});
     }
 
     void update_camera() {
@@ -49,13 +49,19 @@ struct Level {
 
         update_camera();
 
-        for( int ei = 0; ei < enemies.capacity(); ++ei) {
+        // Tick enemies
+        for (int ei = 0; ei < enemies.capacity(); ++ei) {
             auto enemy = enemies.get(ei);
             if (!enemy) { continue; }
             enemy->tick(player);
         }
 
-        whip.tick(player, damage_zones, enemies);
+        // Tick weapons
+        for (int i = 0; i < weapons.capacity(); ++i) {
+            Weapon *weapon = (Weapon*)weapons.get(i);
+            if (!weapon) { continue; }
+            weapon->tick(player, damage_zones, enemies);
+        }
     }
 
     void draw() {

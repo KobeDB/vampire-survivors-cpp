@@ -32,6 +32,7 @@ struct Weapon {
     bool on_attack_event {}; // if true => this tick started an attack
 
     Weapon(int cooldown_time, int attack_time) : cooldown_time{cooldown_time}, attack_time{attack_time} {}
+    virtual ~Weapon() = default;
 
     void tick(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) {
         --remaining_ticks;
@@ -89,9 +90,11 @@ struct Whip : public Weapon {
 //     Bibles(int bible_count) : Weapon{69, 420}, bible_count{bible_count} {}
 // };
 
+// WARNING: don't instantiate this type, this is just for easily getting the biggest sizeof the derived Weapons
 union Weapon_Union {
     Whip whip;
     //Bibles bibles;
+    ~Weapon_Union() {} // we never instantiate Weapon_Union, but this is just to satisfy compiler
 };
 
 // Weapon *make_weapon(const char* weapon_type) {
