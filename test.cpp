@@ -1,7 +1,10 @@
 #include <stdio.h>
+#include <time.h>
 
 #include "pool.h"
 #include "array.h"
+
+#include "basic.h"
 
 enum Weapon_Type {
     WHIP,
@@ -109,6 +112,30 @@ int main() {
     for (int i = 0; i < a.size(); ++i) {
         printf("a[%d]=%d\n", i, a[i].health);
     }
+
+    Vec3 v {1,2,3};
+    v[0] = 1;
+    v[1] = 2;
+    v[2] = 3;
+    auto v2 = v * 10.0f;
+    v2 = 20.0f * v;
+
+    printf("%f, %f, %f\n", v2[0], v2[1], v2[2]);
+    printf("length v2: %f\n", length(v2));
+
+
+    auto dotted = dot(v, v2);
+
+    printf("%f\n", dotted);
+
+    srand(time(nullptr));
+    auto random = random_unit_vec<3>();
+    printf("%f, %f, %f\n", random[0], random[1], random[2]);
+    printf("length: %f\n", length(random));
+
+    Vec3 v3 = random;
+    printf("%f, %f, %f\n", v3.x(), v3.y(), v3.z());
+
 
 }
 

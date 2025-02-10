@@ -101,10 +101,6 @@ Vec2 operator*(float s, const Vec2 &v) {
     return v * s;
 }
 
-Vec2 operator/(float s, const Vec2 &v) {
-    return v / s;
-}
-
 float length(const Vec2 &v) {
     return sqrtf(v.x*v.x + v.y*v.y);
 }
@@ -131,6 +127,152 @@ Vec2 random_unit_vec() {
         }
     }
 }
+
+template <int N>
+struct Vec {
+    float v[N] {};
+
+    Vec() {
+        for (int i = 0; i < N; ++i) {
+            v[i] = 0.0f;
+        }
+    }
+
+    float& operator[](int index) {
+        assert(index < N);
+        return v[index];
+    }
+
+    const float& operator[](int index) const {
+        assert(index < N);
+        return v[index];
+    }
+
+    Vec operator+(const Vec& other) const {
+        Vec result;
+        for (int i = 0; i < N; ++i) {
+            result.v[i] = v[i] + other.v[i];
+        }
+        return result;
+    }
+
+    Vec operator-(const Vec& other) const {
+        Vec result;
+        for (int i = 0; i < N; ++i) {
+            result.v[i] = v[i] - other.v[i];
+        }
+        return result;
+    }
+
+    Vec operator*(float s) const {
+        Vec result;
+        for (int i = 0; i < N; ++i) {
+            result[i] = v[i] * s;
+        }
+        return result;
+    }
+
+    Vec operator/(float s) const {
+        Vec result;
+        for (int i = 0; i < N; ++i) {
+            result[i] = v[i] / s;
+        }
+        return result;
+    }
+
+    Vec& operator+=(const Vec& other) {
+        *this = *this + other;
+        return *this;
+    }
+
+    Vec& operator-=(const Vec& other) {
+        *this = *this - other;
+        return *this;
+    }
+
+    Vec& operator*=(float s) {
+        *this = *this * s;
+        return *this;
+    }
+
+    Vec& operator/=(float s) {
+        *this = *this / s;
+        return *this;
+    }
+};
+
+template< int N >
+Vec<N> operator*(float s, const Vec<N> &v) {
+    return v * s;
+}
+
+template< int N >
+float dot(const Vec<N> &v, const Vec<N> &w) {
+    float result = 0;
+    for (int i = 0; i < N; ++i) {
+        result += v[i] * w[i];
+    }
+    return result;
+}
+
+template< int N >
+float length(const Vec<N> &v) {
+    return sqrtf(dot(v, v));
+}
+
+template< int N >
+Vec<N> normalize(const Vec<N> &v) {
+    float len = length(v);
+    assert(len > 1e-6f && "Cannot normalize a near-zero vector");
+    return v * 1.0f/length(v);
+}
+
+template< int N >
+Vec<N> random_unit_vec() {
+    while (true) {
+        Vec<N> v;
+        for (int i = 0; i < N; ++i) {
+            v[i] = random_float();
+        }
+        float len = length(v);
+        if (len <= 1.0f && len > 0.01) {
+            return normalize(v);
+        }
+    }
+}
+
+// TODO
+// struct Vec2 : public Vec<2> {
+//     Vec2(float x, float y) : Vec<2>{} {
+//         v[0] = x;
+//         v[1] = y;
+//     }
+// };
+
+struct Vec3 : public Vec<3> {
+    Vec3(float x, float y, float z) : Vec<3>{} {
+        v[0] = x;
+        v[1] = y;
+        v[2] = z;
+    }
+
+    Vec3(const Vec<3> &other) : Vec<3>{other} {}
+    Vec3 &operator=(const Vec<3> &other) {
+        if (this != &other) { // check for self-assignment.
+            Vec<3>::operator=(other);
+        }
+        return *this;
+    }
+
+    float &x() { return this->v[0]; }
+    const float &x() const { return this->v[0]; }
+
+    float &y() { return this->v[1]; }
+    const float &y() const { return this->v[1]; }
+
+    float &z() { return this->v[2]; }
+    const float &z() const { return this->v[2]; }
+};
 
 //
 // Defer
