@@ -65,7 +65,7 @@ struct Raw_Pool {
         return {result, index, this};
     }
 
-    void *get(int index) {
+    void *get(int index) const {
         if (!is_occupied[index]) {
             return nullptr;
         }
@@ -147,7 +147,7 @@ struct Pool {
         return { index, generations[index], this };
     }
 
-    T *get(int index) {
+    T *get(int index) const {
         return (T*)pool.get(index);
     }
 

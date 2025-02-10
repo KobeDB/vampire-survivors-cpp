@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <math.h>
+#include <stdlib.h>
 
 //
 // Primitive type aliases
@@ -114,6 +115,21 @@ Vec2 normalize(const Vec2 &v) {
 
 float dot(const Vec2 &v, const Vec2 &w) {
     return v.x * w.x + v.y * w.y;
+}
+
+// generates random float between -1 and 1
+float random_float() {
+    return (rand()/float(RAND_MAX)) * 2.0f - 1.0f;
+}
+
+Vec2 random_unit_vec() {
+    while (true) {
+        Vec2 v = {random_float(), random_float()};
+        float len = length(v);
+        if (len <= 1.0f && len > 0.001) {
+            return normalize(v);
+        }
+    }
 }
 
 //

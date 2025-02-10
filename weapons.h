@@ -2,6 +2,7 @@
 #define WEAPONS_H
 
 #include <string.h>
+#include <stdlib.h>
 #include <stdio.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -192,35 +193,93 @@ struct Projectile_Weapon : public Weapon {
 
 };
 
-#define CROSS_COOLDOWN 200
-#define CROSS_TICKS_BETWEEN_SHOTS 5
-
-struct Cross : public Projectile_Weapon {
-    Cross(Pool<Damage_Zone> &damage_zones) : Projectile_Weapon{CROSS_COOLDOWN, 2, CROSS_TICKS_BETWEEN_SHOTS} {}
-
-    void fire_projectiles(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) override {
-        // Array<Enemy_Distance_Pair> enemy_distances = find_nearest_enemies(player, enemies);
-        // defer (enemy_distances.destroy());
-        // if (false) {}
-    }
-};
-
+//
+// ---------------------
 struct Enemy_Distance {
     int enemy_pool_index {};
     float dist {};
     float health {};
 };
 
-// // TODO: allocate result on a temp arena allocator somehow
-// Array<Enemy_Distance> find_nearest_enemies(Vec2 player_pos, Pool<Enemy> &enemies) {
-//     return {};
-// }
+int enemy_distance_comp(const void *a, const void *b) {
+    return ((Enemy_Distance*)a)->dist - ((Enemy_Distance*)b)->dist;
+}
+
+// TODO: allocate result on a temp arena allocator somehow
+Array<Enemy_Distance> find_nearest_enemies(Vec2 player_pos, const Pool<Enemy> &enemies) {
+
+    Array<Enemy_Distance> result {};
+
+    for (int i = 0; i < enemies.capacity(); ++i) {
+        Enemy *enemy = enemies.get(i);
+        if (!enemy) { continue; }
+        float dist = length(enemy->pos - player_pos);
+        result.push({i, dist, enemy->health});
+    }
+
+    // qsort safety: result is an array of POD Enemy_Distance elements so using qsort is fine.
+    qsort(result.data(), result.size(), sizeof(result[0]), enemy_distance_comp);
+
+    return result;
+}
+// ---------------------
+
+#define MAGIC_WAND_COOLDOWN 1
+#define MAGIC_WAND_TICKS_BETWEEN_SHOTS 5
+#define MAGIC_WAND_DAMAGE 100
+
+struct Magic_Wand : public Projectile_Weapon {
+    int projectile_count = 10;
+
+    Magic_Wand(Pool<Damage_Zone> &damage_zones) : Projectile_Weapon{MAGIC_WAND_COOLDOWN, 1, MAGIC_WAND_TICKS_BETWEEN_SHOTS} {}
+
+    void fire_projectiles(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) override {
+        Array<Enemy_Distance> enemy_distances = find_nearest_enemies(player.pos, enemies);
+        defer (enemy_distances.destroy());
+        int targeted_enemy = 0; // index in enemy_distances array
+
+        for (int i = 0; i < projectile_count; ++i) {
+            Damage_Zone dz {};
+            dz.pos = player.pos;
+            dz.dim = {20, 20};
+            dz.damage = MAGIC_WAND_DAMAGE;
+            dz.color = SKYBLUE;
+            dz.is_active = true;
+            auto dz_handle = damage_zones.add(dz);
+
+            Projectile proj {};
+            proj.dz = dz_handle;
+            proj.lifetime = 50;
+            proj.health = 1;
+
+            while(targeted_enemy<enemy_distances.size() && enemy_distances[targeted_enemy].health<=0) {
+                ++targeted_enemy;
+            }
+
+            Vec2 shoot_dir {};
+            if (targeted_enemy < enemy_distances.size()) {
+                int target_index = enemy_distances[targeted_enemy].enemy_pool_index;
+                Enemy *target = enemies.get(target_index);
+                assert(target);
+                shoot_dir = normalize(target->pos - player.pos);
+                // "simulate" damaging the enemy
+                enemy_distances[targeted_enemy].health -= dz.damage;
+            } else {
+                shoot_dir = random_unit_vec();
+            }
+
+            proj.velocity = shoot_dir * 200;
+
+            projectiles.add(proj);
+        }
+    }
+};
 
 // WARNING: don't instantiate this type, this is just for easily getting the biggest sizeof the derived Weapons
 union Weapon_Union {
     Whip whip;
     Bibles bibles;
-    Cross cross;
+    Magic_Wand magic_wand;
     ~Weapon_Union() {} // we never instantiate Weapon_Union, but this is just to satisfy compiler
 };
 

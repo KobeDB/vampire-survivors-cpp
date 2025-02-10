@@ -1,6 +1,8 @@
 #include "raylib.h"
 
 #include <stdio.h>
+#include <time.h>
+#include <stdlib.h>
 
 #include "basic.h"
 #include "constants.h"
@@ -22,6 +24,11 @@ int main() {
 
     auto music = LoadMusicStream("res/sounds/vampire_jam.mp3");
     PlayMusicStream(music);
+
+    //
+    // Init rand
+    //
+    srand(time(nullptr));
 
     //
     // Init resources

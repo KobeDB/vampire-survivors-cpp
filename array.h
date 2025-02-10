@@ -15,6 +15,8 @@ struct Array {
     int size() const { return m_size; }
     int capacity() const { return m_capacity; }
 
+    T *data() { return &(this->operator[](0)); }
+
     void push(const T &value) {
         ensure_capacity();
         new (get_element_ptr(m_size)) T{ value };

@@ -10,7 +10,7 @@
 #include "basic.h"
 #include "entities.h"
 
-#define MAX_ENEMIES 10000
+#define MAX_ENEMIES 2000
 #define MAX_DAMAGE_ZONES 500
 #define MAX_WEAPONS 10
 #define MAX_DAMAGE_INDICATORS 10000
@@ -35,10 +35,13 @@ struct Level {
         camera.offset = {screen_dim.x / 2, screen_dim.y / 2};
         camera.zoom = 1;
 
-        enemies.add(make_enemy(Bat, player.pos + Vec2{50,50}));
+        for (int i = 0; i < MAX_ENEMIES; ++i) {
+            enemies.add(make_enemy(Bat, player.pos + random_unit_vec() * 1000));
+        }
 
         weapons.add(Whip{damage_zones});
         weapons.add(Bibles{3, damage_zones});
+        weapons.add(Magic_Wand{damage_zones});
     }
 
     void update_camera() {
