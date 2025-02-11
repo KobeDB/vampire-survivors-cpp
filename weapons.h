@@ -201,6 +201,8 @@ struct Projectile {
     float rotation {};
     float rotation_speed {};
     int health = 9999;
+
+    Vec2 position() const { return get(dz)->pos; }
 };
 
 struct Projectile_Weapon : public Weapon {
@@ -256,7 +258,7 @@ struct Projectile_Weapon : public Weapon {
             // emit particles
             if (particle_spawn_interval != 0) {
                 if ((proj->lifetime % particle_spawn_interval) == 0) {
-                    spawn_particles(dz->pos);
+                    spawn_particles(*proj);
                 }
             }
         }
@@ -266,7 +268,7 @@ struct Projectile_Weapon : public Weapon {
 
     virtual void fire_projectiles(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) = 0;
 
-    virtual void spawn_particles(Vec2 pos) = 0;
+    virtual void spawn_particles(const Projectile &projectile) = 0;
 };
 
 //
@@ -350,9 +352,9 @@ struct Magic_Wand : public Projectile_Weapon {
         }
     }
 
-    void spawn_particles(Vec2 pos) override {
+    void spawn_particles(const Projectile &projectile) override {
         Particle p {100, Vec3{0,0,1}, Vec3{0,1,0}};
-        p.position = pos;
+        p.position = get(projectile.dz)->pos;
         emitter.emit(p);
     }
 
@@ -376,6 +378,7 @@ struct Cross : public Projectile_Weapon {
         Projectile proj {};
         proj.dz = dz_handle;
         proj.lifetime = 300;
+        proj.rotation_speed = 100;
 
         Array<Enemy_Distance> enemy_distances = find_nearest_enemies(player.pos, enemies);
         defer (enemy_distances.destroy());
@@ -397,9 +400,10 @@ struct Cross : public Projectile_Weapon {
         projectiles.add(proj);
     }
 
-    void spawn_particles(Vec2 pos) override {
-        Particle p {100, Vec3{1,1,0}, Vec3{1,1,0}};
-        p.position = pos;
+    void spawn_particles(const Projectile &projectile) override {
+        Vec3 particle_color = Vec3{1,1,0.4f} * 0.6f;
+        Particle p {60, particle_color, particle_color};
+        p.position = get(projectile.dz)->pos;
         p.rotation_speed = 100;
         p.scaling = {2,2};
         emitter.emit(p);
@@ -407,15 +411,21 @@ struct Cross : public Projectile_Weapon {
 
     void draw() override {
         emitter.draw();
+        for (int i = 0; i < projectiles.capacity(); ++i) {
+            Projectile *proj = projectiles.get(i);
+            if (!proj) { continue; }
+            draw_texture(get_texture("cross"), proj->position(), 2.0f, proj->rotation);
+        }
     }
 
 };
 
 #define FIRE_WAND_COOLDOWN 200
 #define FIRE_WAND_TICKS_BETWEEN_SHOTS 1
+#define FIRE_WAND_PARTICLE_SPAWN_INTERVAL 2
 
 struct Fire_Wand : public Projectile_Weapon {
-    Fire_Wand() : Projectile_Weapon{FIRE_WAND_COOLDOWN, 1, FIRE_WAND_TICKS_BETWEEN_SHOTS} {}
+    Fire_Wand() : Projectile_Weapon{FIRE_WAND_COOLDOWN, 1, FIRE_WAND_TICKS_BETWEEN_SHOTS, get_texture("fireball"), FIRE_WAND_PARTICLE_SPAWN_INTERVAL} {}
 
     void fire_projectiles(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) override {
 
@@ -455,8 +465,41 @@ struct Fire_Wand : public Projectile_Weapon {
         projectiles.add(proj);
     }
 
-    void spawn_particles(Vec2 pos) override {
-        // TODO
+    void spawn_particles(const Projectile &projectile) override {
+
+        int angles = 3;
+        float angle_step = 2 * M_PI / float(angles);
+        int radius_steps = 3;
+        // float dim_x = get(projectile.dz)->dim.x();
+        // float radius_step = dim_x  / float(radius_steps);
+        float radius_step = 0.8f * get(projectile.dz)->dim.x() / float(radius_steps);
+
+        float max_lifetime = 50.0f;
+        float min_lifetime = 5.0f;
+        float max_radius = (radius_steps-1) * radius_step;
+
+        for (int i = 0; i < angles; ++i) {
+            float angle = i * angle_step;
+            for (int j = 0; j < radius_steps; ++j) {
+                float radius = j * radius_step;
+                Vec2 particle_pos = get(projectile.dz)->pos + Vec2{cosf(angle), sinf(angle)} * radius;
+                int lifetime = int(max_lifetime - (max_lifetime - min_lifetime) * (radius/max_radius));
+
+                Vec3 particle_color = Vec3{1,1,1};
+                Particle p {lifetime, particle_color, particle_color};
+                p.position = particle_pos;
+                p.velocity = -projectile.velocity * 0.2f;
+                p.scaling = {0.2f,0.2f};
+
+                float deviation_angle = random_float(-0.2f,0.2f);
+                p.velocity = rotate(p.velocity, deviation_angle);
+
+                float size_deviation = random_float(0.5f, 1.6f);
+                p.scaling *= size_deviation;
+
+                emitter.emit(p);
+            }
+        }
     }
 
     void draw() override {

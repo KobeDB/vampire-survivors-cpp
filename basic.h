@@ -43,9 +43,14 @@ struct Result {
 // Math types
 //
 
+inline float random_float(float min, float max) {
+    float w = max - min;
+    return (rand()/float(RAND_MAX)) * w + min;
+}
+
 // generates random float between -1 and 1
 inline float random_float() {
-    return (rand()/float(RAND_MAX)) * 2.0f - 1.0f;
+    return random_float(-1.0f, 1.0f);
 }
 
 // Returns a random integer in the range [min, max)
@@ -194,6 +199,12 @@ struct Vec2 : public Vec<2> {
     float &y() { return this->v[1]; }
     const float &y() const { return this->v[1]; }
 };
+
+inline Vec2 rotate(Vec2 v, float angle_rad) {
+    float cos_angle = cosf(angle_rad);
+    float sin_angle = sinf(angle_rad);
+    return {v.x() * cos_angle - v.y() * sin_angle, v.x() * sin_angle + v.y() * cos_angle};
+}
 
 struct Vec3 : public Vec<3> {
     Vec3() : Vec<3>{} {}

@@ -95,7 +95,7 @@ struct Enemy {
 
     void draw() const {
         Vec2 corner = pos - dim/2;
-        DrawRectangle(corner.x(), corner.y(), dim.x(), dim.y(), RED);
+        DrawRectangleLines(corner.x(), corner.y(), dim.x(), dim.y(), RED);
         animation.draw(pos, velocity.x() < 0);
     }
 };
