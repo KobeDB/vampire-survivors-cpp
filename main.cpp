@@ -17,7 +17,7 @@ int main() {
 
     Vec2 screen_dim{ 1600, 900 };
 
-    InitWindow(screen_dim.x, screen_dim.y, "raylib [core] example - basic window");
+    InitWindow(screen_dim.x(), screen_dim.y(), "raylib [core] example - basic window");
     SetTargetFPS(TICKS_PER_SECOND);
 
     InitAudioDevice();
@@ -51,7 +51,7 @@ int main() {
     for(int i = 0; i < vectors.capacity(); ++i) {
         auto v = vectors.get(i);
         if (!v) { continue; }
-        printf("vectors[%d]=%f\n", i, v->x);
+        printf("vectors[%d]=%f\n", i, v->x());
     }
 
     vectors.free(0);
@@ -59,7 +59,7 @@ int main() {
     for(int i = 0; i < vectors.capacity(); ++i) {
         auto v = vectors.get(i);
         if (!v) { continue; }
-        printf("vectors[%d]=%f\n", i, v->x);
+        printf("vectors[%d]=%f\n", i, v->x());
     }
 
     while (!WindowShouldClose()) {

@@ -15,6 +15,7 @@ struct Player {
     Vec2 pos {};
     Vec2 dim {};
     float move_speed {};
+    Vec2 velocity {};
     Vec2 facing_dir {};
 
     int cur_level {};
@@ -41,30 +42,31 @@ struct Player {
     void tick() {
         Vec2 move_dir{};
         if (IsKeyDown(KEY_D)) {
-            move_dir.x += 1;
+            move_dir.x() += 1;
             facing_dir = {1,0};
         }
         if (IsKeyDown(KEY_A)) {
-            move_dir.x -= 1;
+            move_dir.x() -= 1;
             facing_dir = {-1,0};
         }
         if (IsKeyDown(KEY_S)) {
-            move_dir.y += 1;
+            move_dir.y() += 1;
         }
         if (IsKeyDown(KEY_W)) {
-            move_dir.y -= 1;
+            move_dir.y() -= 1;
         }
         if (length(move_dir) != 0) {
             move_dir = normalize(move_dir);
             animation.tick();
         }
-        pos += move_speed * move_dir * TICK_TIME;
+        velocity = move_dir * move_speed;
+        pos += velocity * TICK_TIME;
     }
 
     void draw() {
-        auto corner = pos - dim/2;
-        DrawRectangleLines(corner.x, corner.y, dim.x, dim.y, MAGENTA);
-        animation.draw(pos, facing_dir.x <= 0);
+        Vec2 corner = pos - dim/2;
+        DrawRectangleLines(corner.x(), corner.y(), dim.x(), dim.y(), MAGENTA);
+        animation.draw(pos, facing_dir.x() <= 0);
     }
 };
 
@@ -92,9 +94,9 @@ struct Enemy {
     }
 
     void draw() const {
-        auto corner = pos - dim/2;
-        DrawRectangle(corner.x, corner.y, dim.x, dim.y, RED);
-        animation.draw(pos, velocity.x < 0);
+        Vec2 corner = pos - dim/2;
+        DrawRectangle(corner.x(), corner.y(), dim.x(), dim.y(), RED);
+        animation.draw(pos, velocity.x() < 0);
     }
 };
 

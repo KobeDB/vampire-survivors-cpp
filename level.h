@@ -31,12 +31,12 @@ struct Level {
     void init(Vec2 screen_dim) {
         player.init();
 
-        camera.target = {player.pos.x, player.pos.y};
-        camera.offset = {screen_dim.x / 2, screen_dim.y / 2};
+        camera.target = {player.pos.x(), player.pos.y()};
+        camera.offset = {screen_dim.x() / 2, screen_dim.y() / 2};
         camera.zoom = 1;
 
         for (int i = 0; i < MAX_ENEMIES; ++i) {
-            enemies.add(make_enemy(Bat, player.pos + random_unit_vec() * 1000));
+            enemies.add(make_enemy(Bat, player.pos + random_unit_vec<2>() * 1000));
         }
 
         weapons.add(Whip{damage_zones});
@@ -45,7 +45,7 @@ struct Level {
     }
 
     void update_camera() {
-        camera.target = {player.pos.x, player.pos.y};
+        camera.target = {player.pos.x(), player.pos.y()};
     }
 
     void tick() {
@@ -85,6 +85,13 @@ struct Level {
                 auto enemy = enemies.get(ei);
                 if (!enemy) { continue; }
                 enemy->draw();
+            }
+
+            // Draw weapons
+            for( int i = 0; i < weapons.capacity(); ++i) {
+                Weapon *weapon = (Weapon*)weapons.get(i);
+                if (!weapon) { continue; }
+                weapon->draw();
             }
 
             // Draw damage zones (for debug purposes)

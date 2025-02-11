@@ -12,6 +12,7 @@
 #include "raylib.h"
 
 #include "entities.h"
+#include "particles.h"
 
 #include "array.h"
 
@@ -25,8 +26,8 @@ struct Damage_Zone {
 
     void draw() const {
         if (!is_active) { return; }
-        auto corner = pos - dim/2;
-        DrawRectangleLines( corner.x, corner.y, dim.x, dim.y, color);
+        Vec2 corner = pos - dim/2;
+        DrawRectangleLines( corner.x(), corner.y(), dim.x(), dim.y(), color);
     }
 };
 
@@ -58,10 +59,13 @@ struct Weapon {
     }
 
     virtual void progress_attack(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) = 0;
+
+    virtual void draw() = 0;
 };
 
 struct Whip : public Weapon {
     Pool_Handle<Damage_Zone> dz_handle {};
+    Particle_Emitter emitter {get_texture("slash")};
 
     Whip(Pool<Damage_Zone> &damage_zones) : Weapon{100, 10} {
         Damage_Zone the_dz {};
@@ -77,17 +81,30 @@ struct Whip : public Weapon {
 
         if (on_attack_event) {
             // Set damage zone's position
-            if (player.facing_dir.x >= 0) {
-                dz->pos.x = player.pos.x + player.dim.x/2 + dz->dim.x/2;
+            if (player.facing_dir.x() >= 0) {
+                dz->pos.x() = player.pos.x() + player.dim.x()/2 + dz->dim.x()/2;
             }
             else {
-                dz->pos.x = player.pos.x - player.dim.x/2 - dz->dim.x/2;
+                dz->pos.x() = player.pos.x() - player.dim.x()/2 - dz->dim.x()/2;
             }
 
-            dz->pos.y = player.pos.y;
+            dz->pos.y() = player.pos.y();
+
+            // Emit slash particle
+            Particle p {60, Vec3{1,0,0}, Vec3{1,0,0}};
+            p.scaling = {7, 3};
+            p.position = dz->pos;
+            p.flip_x = player.facing_dir.x() < 0;
+            emitter.emit(p);
         }
 
         dz->is_active = !is_cooling_down;
+
+        emitter.tick();
+    }
+
+    void draw() override {
+        emitter.draw();
     }
 };
 
@@ -100,6 +117,8 @@ struct Bibles : public Weapon {
 
     float revolutions_per_attack_period = 3;
     float radius = 100;
+
+    Particle_Emitter emitter {get_texture("bible")};
 
     Bibles(int bible_count, Pool<Damage_Zone> &damage_zones) : Weapon{BIBLES_COOLDOWN, BIBLES_LIFETIME}, bible_count{bible_count} {
         for (int i = 0; i < bible_count; ++i) {
@@ -118,6 +137,23 @@ struct Bibles : public Weapon {
             bible->pos = calc_bible_center(i, player.pos, remaining_ticks);
             bible->is_active = !is_cooling_down;
         }
+
+        // spawn particles
+        if (!is_cooling_down) {
+            for (int i = 0; i < bible_count; ++i) {
+                Damage_Zone *bible = get(bibles[i]);
+
+                Particle p {20, Vec3{1,0,1}, Vec3{1,0,0}};
+                p.position = bible->pos;
+                p.scaling = {0.8,0.8};
+                Vec2 r = player.pos - bible->pos;
+                p.velocity = player.velocity + normalize(Vec2{-r.y(), r.x()}) * 10.0f;
+
+                emitter.emit(p);
+            }
+        }
+
+        emitter.tick();
     }
 
     Vec2 calc_bible_center(int bible, Vec2 orbit_center, int rem_lifetime) const {
@@ -128,6 +164,10 @@ struct Bibles : public Weapon {
         Vec2 bible_center_on_unit_circle = {cosf(bible_angle), sinf(bible_angle)};
         Vec2 bible_center = bible_center_on_unit_circle * radius + orbit_center;
         return bible_center;
+    }
+
+    void draw() override {
+        emitter.draw();
     }
 };
 
@@ -265,13 +305,17 @@ struct Magic_Wand : public Projectile_Weapon {
                 // "simulate" damaging the enemy
                 enemy_distances[targeted_enemy].health -= dz.damage;
             } else {
-                shoot_dir = random_unit_vec();
+                shoot_dir = random_unit_vec<2>();
             }
 
             proj.velocity = shoot_dir * 200;
 
             projectiles.add(proj);
         }
+    }
+
+    void draw() override {
+        // TODO
     }
 };
 

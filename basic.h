@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <stdlib.h>
+#include <assert.h>
 
 //
 // Primitive type aliases
@@ -41,91 +42,10 @@ struct Result {
 //
 // Math types
 //
-struct Vec2 {
-    union {
-        struct {
-            float x, y;
-        };
-        float v[2];
-    };
-
-    Vec2() { x = 0; y = 0; }
-
-    Vec2(float px, float py) {
-        x = px;
-        y = py;
-    }
-
-    float& operator[](size_t index) { return v[index]; }
-
-    const float& operator[](size_t index) const { return v[index]; }
-
-    Vec2 operator+(const Vec2 &w) const {
-        return { x + w.x, y + w.y };
-    }
-
-    Vec2 operator-(const Vec2 &w) const {
-        return { x - w.x, y - w.y };
-    }
-
-    Vec2 operator*(float s) const {
-        return { x * s, y * s };
-    }
-
-    Vec2 operator/(float s) const {
-        return { x / s, y / s };
-    }
-
-    Vec2& operator+=(const Vec2& other) {
-        *this = *this + other;
-        return *this;
-    }
-
-    Vec2& operator-=(const Vec2& other) {
-        *this = *this - other;
-        return *this;
-    }
-
-    Vec2& operator*=(float s) {
-        *this = *this * s;
-        return *this;
-    }
-
-    Vec2& operator/=(float s) {
-        *this = *this / s;
-        return *this;
-    }
-};
-
-Vec2 operator*(float s, const Vec2 &v) {
-    return v * s;
-}
-
-float length(const Vec2 &v) {
-    return sqrtf(v.x*v.x + v.y*v.y);
-}
-
-Vec2 normalize(const Vec2 &v) {
-    return v * 1.0f/length(v);
-}
-
-float dot(const Vec2 &v, const Vec2 &w) {
-    return v.x * w.x + v.y * w.y;
-}
 
 // generates random float between -1 and 1
-float random_float() {
+inline float random_float() {
     return (rand()/float(RAND_MAX)) * 2.0f - 1.0f;
-}
-
-Vec2 random_unit_vec() {
-    while (true) {
-        Vec2 v = {random_float(), random_float()};
-        float len = length(v);
-        if (len <= 1.0f && len > 0.001) {
-            return normalize(v);
-        }
-    }
 }
 
 template <int N>
@@ -180,6 +100,10 @@ struct Vec {
         return result;
     }
 
+    Vec operator-() const {
+        return *this * -1.0f;
+    }
+
     Vec& operator+=(const Vec& other) {
         *this = *this + other;
         return *this;
@@ -202,12 +126,12 @@ struct Vec {
 };
 
 template< int N >
-Vec<N> operator*(float s, const Vec<N> &v) {
+inline Vec<N> operator*(float s, const Vec<N> &v) {
     return v * s;
 }
 
 template< int N >
-float dot(const Vec<N> &v, const Vec<N> &w) {
+inline float dot(const Vec<N> &v, const Vec<N> &w) {
     float result = 0;
     for (int i = 0; i < N; ++i) {
         result += v[i] * w[i];
@@ -216,19 +140,19 @@ float dot(const Vec<N> &v, const Vec<N> &w) {
 }
 
 template< int N >
-float length(const Vec<N> &v) {
+inline float length(const Vec<N> &v) {
     return sqrtf(dot(v, v));
 }
 
 template< int N >
-Vec<N> normalize(const Vec<N> &v) {
-    float len = length(v);
-    assert(len > 1e-6f && "Cannot normalize a near-zero vector");
-    return v * 1.0f/length(v);
+inline Vec<N> normalize(const Vec<N> &v) {
+    // float len = length(v);
+    // assert(len > 1e-6f && "Cannot normalize a near-zero vector");
+    return v / length(v);
 }
 
 template< int N >
-Vec<N> random_unit_vec() {
+inline Vec<N> random_unit_vec() {
     while (true) {
         Vec<N> v;
         for (int i = 0; i < N; ++i) {
@@ -241,15 +165,32 @@ Vec<N> random_unit_vec() {
     }
 }
 
-// TODO
-// struct Vec2 : public Vec<2> {
-//     Vec2(float x, float y) : Vec<2>{} {
-//         v[0] = x;
-//         v[1] = y;
-//     }
-// };
+struct Vec2 : public Vec<2> {
+    Vec2() : Vec<2>{} {}
+
+    Vec2(float x, float y) : Vec<2>{} {
+        v[0] = x;
+        v[1] = y;
+    }
+
+    Vec2(const Vec<2> &other) : Vec<2>{other} {}
+    Vec2 &operator=(const Vec<2> &other) {
+        if (this != &other) { // check for self-assignment.
+            Vec<2>::operator=(other);
+        }
+        return *this;
+    }
+
+    float &x() { return this->v[0]; }
+    const float &x() const { return this->v[0]; }
+
+    float &y() { return this->v[1]; }
+    const float &y() const { return this->v[1]; }
+};
 
 struct Vec3 : public Vec<3> {
+    Vec3() : Vec<3>{} {}
+
     Vec3(float x, float y, float z) : Vec<3>{} {
         v[0] = x;
         v[1] = y;
@@ -272,6 +213,58 @@ struct Vec3 : public Vec<3> {
 
     float &z() { return this->v[2]; }
     const float &z() const { return this->v[2]; }
+
+    float &r() { return this->v[0]; }
+    const float &r() const { return this->v[0]; }
+
+    float &g() { return this->v[1]; }
+    const float &g() const { return this->v[1]; }
+
+    float &b() { return this->v[2]; }
+    const float &b() const { return this->v[2]; }
+};
+
+struct Vec4 : public Vec<4> {
+    Vec4() : Vec<4>{} {}
+
+    Vec4(float x, float y, float z, float w) : Vec<4>{} {
+        v[0] = x;
+        v[1] = y;
+        v[2] = z;
+        v[3] = w;
+    }
+
+    Vec4(const Vec<4> &other) : Vec<4>{other} {}
+    Vec4 &operator=(const Vec<4> &other) {
+        if (this != &other) { // check for self-assignment.
+            Vec<4>::operator=(other);
+        }
+        return *this;
+    }
+
+    float &x() { return this->v[0]; }
+    const float &x() const { return this->v[0]; }
+
+    float &y() { return this->v[1]; }
+    const float &y() const { return this->v[1]; }
+
+    float &z() { return this->v[2]; }
+    const float &z() const { return this->v[2]; }
+
+    float &w() { return this->v[3]; }
+    const float &w() const { return this->v[3]; }
+
+    float &r() { return this->v[0]; }
+    const float &r() const { return this->v[0]; }
+
+    float &g() { return this->v[1]; }
+    const float &g() const { return this->v[1]; }
+
+    float &b() { return this->v[2]; }
+    const float &b() const { return this->v[2]; }
+
+    float &a() { return this->v[3]; }
+    const float &a() const { return this->v[3]; }
 };
 
 //
@@ -285,7 +278,7 @@ struct privDefer {
 };
 
 template <typename F>
-privDefer<F> defer_func(F f) {
+inline privDefer<F> defer_func(F f) {
 	return privDefer<F>(f);
 }
 

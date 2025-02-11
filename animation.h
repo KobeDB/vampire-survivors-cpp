@@ -37,15 +37,15 @@ struct Animation {
     void draw(Vec2 pos, bool flip_x) const {
         auto frame_pos = Vec2{ frame * frame_width, 0 };
         auto frame_dim = Vec2{ frame_width, float(texture.height) };
-        if (flip_x) { frame_dim.x *= -1; }
-        if (flip_x_by_default) { frame_dim.x *= -1; }
+        if (flip_x) { frame_dim.x() *= -1; }
+        if (flip_x_by_default) { frame_dim.x() *= -1; }
 
-        auto frame_rec = Rectangle{ frame_pos.x, frame_pos.y, frame_dim.x, frame_dim.y };
+        auto frame_rec = Rectangle{ frame_pos.x(), frame_pos.y(), frame_dim.x(), frame_dim.y() };
 
-        auto dest_rec_dim = Vec2{ 75 * scaling.x, 75 * scaling.y };
-        auto dest_rec_pos = pos - dest_rec_dim/2.0f;
+        Vec2 dest_rec_dim = Vec2{ 75 * scaling.x(), 75 * scaling.y() };
+        Vec2 dest_rec_pos = pos - dest_rec_dim/2.0f;
 
-        auto dest_rec = Rectangle{ dest_rec_pos.x, dest_rec_pos.y, dest_rec_dim.x, dest_rec_dim.y };
+        auto dest_rec = Rectangle{ dest_rec_pos.x(), dest_rec_pos.y(), dest_rec_dim.x(), dest_rec_dim.y() };
 
         DrawTexturePro(texture, frame_rec, dest_rec, {}, 0, WHITE);
     }
