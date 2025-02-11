@@ -35,7 +35,7 @@ struct Level {
         camera.offset = {screen_dim.x() / 2, screen_dim.y() / 2};
         camera.zoom = 1;
 
-        for (int i = 0; i < MAX_ENEMIES; ++i) {
+        for (int i = 0; i < 1; ++i) {
             enemies.add(make_enemy(Bat, player.pos + random_unit_vec<2>() * 1000));
         }
 

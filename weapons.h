@@ -221,6 +221,8 @@ struct Projectile_Weapon : public Weapon {
 
     Projectile_Weapon(int cooldown_time, int shot_count, int ticks_between_shots, Texture2D particle_tex, int particle_spawn_interval) : Weapon{cooldown_time, (shot_count-1)*ticks_between_shots}, emitter{particle_tex}, particle_spawn_interval{particle_spawn_interval}, shot_count{shot_count}, ticks_between_shots{ticks_between_shots} {}
 
+    Projectile_Weapon(int cooldown_time, int shot_count, int ticks_between_shots, Texture2D particle_tex, int particle_spawn_interval, int particle_pool_size) : Weapon{cooldown_time, (shot_count-1)*ticks_between_shots}, emitter{particle_pool_size, particle_tex}, particle_spawn_interval{particle_spawn_interval}, shot_count{shot_count}, ticks_between_shots{ticks_between_shots} {}
+
     void progress_attack(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) override {
         if (on_attack_event) {
             pending_shots = shot_count;
@@ -422,10 +424,13 @@ struct Cross : public Projectile_Weapon {
 
 #define FIRE_WAND_COOLDOWN 200
 #define FIRE_WAND_TICKS_BETWEEN_SHOTS 1
-#define FIRE_WAND_PARTICLE_SPAWN_INTERVAL 2
+#define FIRE_WAND_PARTICLE_SPAWN_INTERVAL 5
 
 struct Fire_Wand : public Projectile_Weapon {
-    Fire_Wand() : Projectile_Weapon{FIRE_WAND_COOLDOWN, 1, FIRE_WAND_TICKS_BETWEEN_SHOTS, get_texture("fireball"), FIRE_WAND_PARTICLE_SPAWN_INTERVAL} {}
+
+    int fire_ball_count = 10;
+
+    Fire_Wand() : Projectile_Weapon{FIRE_WAND_COOLDOWN, 1, FIRE_WAND_TICKS_BETWEEN_SHOTS, get_texture("fireball"), FIRE_WAND_PARTICLE_SPAWN_INTERVAL, 10000} {}
 
     void fire_projectiles(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) override {
 
@@ -448,21 +453,29 @@ struct Fire_Wand : public Projectile_Weapon {
             shoot_dir = random_unit_vec<2>();
         }
 
-        Damage_Zone dz {};
-        dz.pos = player.pos;
-        dz.dim = {40, 40};
-        dz.damage = 50;
-        dz.color = ORANGE;
-        dz.is_active = true;
-        auto dz_handle = damage_zones.add(dz);
+        float spread_angle = 0.4f;
+        float angle_step = spread_angle / float(fire_ball_count);
+        float start_angle = -angle_step * float(fire_ball_count/2);
+        for (int i = 0; i < fire_ball_count; ++i) {
+            float angle = start_angle + i * angle_step;
+            Vec2 proj_shoot_dir = rotate(shoot_dir, angle);
 
-        Projectile proj {};
-        proj.dz = dz_handle;
-        proj.lifetime = 300;
-        proj.velocity = shoot_dir * 300;
-        proj.rotation_speed = 200.0f;
+            Damage_Zone dz {};
+            dz.pos = player.pos;
+            dz.dim = {40, 40};
+            dz.damage = 50;
+            dz.color = ORANGE;
+            dz.is_active = true;
+            auto dz_handle = damage_zones.add(dz);
 
-        projectiles.add(proj);
+            Projectile proj {};
+            proj.dz = dz_handle;
+            proj.lifetime = 300;
+            proj.velocity = proj_shoot_dir * 300;
+            proj.rotation_speed = 200.0f;
+
+            projectiles.add(proj);
+        }
     }
 
     void spawn_particles(const Projectile &projectile) override {
