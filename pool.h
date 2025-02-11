@@ -174,7 +174,7 @@ struct Pool {
 };
 
 template< typename T >
-static T *get(Pool_Handle<T> handle) {
+inline static T *get(Pool_Handle<T> handle) {
     bool handle_ok = handle.pool->is_handle_valid(handle);
     if (!handle_ok) {
         fprintf(stderr, "Pool::get: invalid handle\n");
@@ -184,7 +184,7 @@ static T *get(Pool_Handle<T> handle) {
 }
 
 template< typename T >
-void free(Pool_Handle<T> handle) {
+inline void free(Pool_Handle<T> handle) {
     bool handle_ok = handle.pool->is_handle_valid(handle);
     if (!handle_ok) {
         fprintf(stderr, "Pool::free(Pool_Handle<T>): invalid handle\n");
