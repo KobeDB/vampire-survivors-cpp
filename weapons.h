@@ -27,7 +27,7 @@ struct Damage_Zone {
     void draw() const {
         if (!is_active) { return; }
         Vec2 corner = pos - dim/2;
-        DrawRectangleLines( corner.x(), corner.y(), dim.x(), dim.y(), color);
+        DrawRectangleLines(corner.x(), corner.y(), dim.x(), dim.y(), color);
     }
 };
 
@@ -186,11 +186,14 @@ struct Projectile_Weapon : public Weapon {
     int ticks_until_next_shot {};
     int pending_shots {};
 
+    Particle_Emitter emitter;
+    int particle_spawn_interval;
+
     // constants
     int shot_count {};
     int ticks_between_shots {};
 
-    Projectile_Weapon(int cooldown_time, int shot_count, int ticks_between_shots) : Weapon{cooldown_time, (shot_count-1)*ticks_between_shots}, shot_count{shot_count}, ticks_between_shots{ticks_between_shots} {}
+    Projectile_Weapon(int cooldown_time, int shot_count, int ticks_between_shots, Texture2D particle_tex, int particle_spawn_interval) : Weapon{cooldown_time, (shot_count-1)*ticks_between_shots}, emitter{particle_tex}, particle_spawn_interval{particle_spawn_interval}, shot_count{shot_count}, ticks_between_shots{ticks_between_shots} {}
 
     void progress_attack(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) override {
         if (on_attack_event) {
@@ -225,12 +228,19 @@ struct Projectile_Weapon : public Weapon {
             proj->velocity += proj->acceleration * TICK_TIME;
             dz->pos += proj->velocity * TICK_TIME;
             proj->rotation += proj->rotation_speed * TICK_TIME;
+
+            // emit particles
+            if ((proj->lifetime % particle_spawn_interval) == 0) {
+                spawn_particles(dz->pos);
+            }
         }
 
+        emitter.tick();
     }
 
     virtual void fire_projectiles(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) = 0;
 
+    virtual void spawn_particles(Vec2 pos) = 0;
 };
 
 //
@@ -264,14 +274,14 @@ Array<Enemy_Distance> find_nearest_enemies(Vec2 player_pos, const Pool<Enemy> &e
 }
 // ---------------------
 
-#define MAGIC_WAND_COOLDOWN 1
+#define MAGIC_WAND_COOLDOWN 200
 #define MAGIC_WAND_TICKS_BETWEEN_SHOTS 5
 #define MAGIC_WAND_DAMAGE 100
 
 struct Magic_Wand : public Projectile_Weapon {
     int projectile_count = 10;
 
-    Magic_Wand(Pool<Damage_Zone> &damage_zones) : Projectile_Weapon{MAGIC_WAND_COOLDOWN, 1, MAGIC_WAND_TICKS_BETWEEN_SHOTS} {}
+    Magic_Wand(Pool<Damage_Zone> &damage_zones) : Projectile_Weapon{MAGIC_WAND_COOLDOWN, 1, MAGIC_WAND_TICKS_BETWEEN_SHOTS, get_texture("flare"), 5} {}
 
     void fire_projectiles(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) override {
         Array<Enemy_Distance> enemy_distances = find_nearest_enemies(player.pos, enemies);
@@ -289,7 +299,7 @@ struct Magic_Wand : public Projectile_Weapon {
 
             Projectile proj {};
             proj.dz = dz_handle;
-            proj.lifetime = 50;
+            proj.lifetime = 420;
             proj.health = 1;
 
             while(targeted_enemy<enemy_distances.size() && enemy_distances[targeted_enemy].health<=0) {
@@ -314,16 +324,61 @@ struct Magic_Wand : public Projectile_Weapon {
         }
     }
 
+    void spawn_particles(Vec2 pos) override {
+        Particle p {100, Vec3{0,0,1}, Vec3{0,1,0}};
+        p.position = pos;
+        emitter.emit(p);
+    }
+
     void draw() override {
-        // TODO
+        emitter.draw();
     }
 };
+
+// struct Cross : public Projectile_Weapon {
+//     Cross() : Projectile_Weapon{200, 2, 10, get_texture("cross"), 20} {}
+
+//         void fire_projectiles(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) override {
+//         Damage_Zone dz {};
+//         dz.pos = player.pos;
+//         dz.dim = {75, 75};
+//         dz.damage = 50;
+//         dz.color = YELLOW;
+//         dz.is_active = true;
+//         auto dz_handle = damage_zones.add(dz);
+
+//         Projectile proj {};
+//         proj.dz = dz_handle;
+//         proj.lifetime = 300;
+
+//         Array<Enemy_Distance> enemy_distances = find_nearest_enemies(player.pos, enemies);
+//         defer (enemy_distances.destroy());
+
+//         Vec2 shoot_dir {};
+//         if (enemy_distances.size() > 0) {
+//             int target_index = enemy_distances[0].enemy_pool_index;
+//             Enemy *target = enemies.get(target_index);
+//             assert(target);
+//             shoot_dir = normalize(target->pos - player.pos);
+//         } else {
+//             shoot_dir = random_unit_vec<2>();
+//         }
+
+//         proj.velocity = shoot_dir * 200;
+
+//         proj.acceleration = -shoot_dir * 500;
+
+//         projectiles.add(proj);
+//     }
+
+// };
 
 // WARNING: don't instantiate this type, this is just for easily getting the biggest sizeof the derived Weapons
 union Weapon_Union {
     Whip whip;
     Bibles bibles;
     Magic_Wand magic_wand;
+    //Cross cross;
     ~Weapon_Union() {} // we never instantiate Weapon_Union, but this is just to satisfy compiler
 };
 

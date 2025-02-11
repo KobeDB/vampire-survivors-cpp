@@ -104,7 +104,7 @@ enum Enemy_Type {
     Bat
 };
 
-Enemy make_enemy(Enemy_Type type, Vec2 pos) {
+inline Enemy make_enemy(Enemy_Type type, Vec2 pos) {
     Enemy result {};
     result.pos = pos;
 
