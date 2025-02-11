@@ -335,50 +335,62 @@ struct Magic_Wand : public Projectile_Weapon {
     }
 };
 
-// struct Cross : public Projectile_Weapon {
-//     Cross() : Projectile_Weapon{200, 2, 10, get_texture("cross"), 20} {}
+struct Cross : public Projectile_Weapon {
+    Cross() : Projectile_Weapon{200, 2, 10, get_texture("cross"), 10} {}
 
-//         void fire_projectiles(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) override {
-//         Damage_Zone dz {};
-//         dz.pos = player.pos;
-//         dz.dim = {75, 75};
-//         dz.damage = 50;
-//         dz.color = YELLOW;
-//         dz.is_active = true;
-//         auto dz_handle = damage_zones.add(dz);
+    void fire_projectiles(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) override {
+        Damage_Zone dz {};
+        dz.pos = player.pos;
+        dz.dim = {75, 75};
+        dz.damage = 50;
+        dz.color = YELLOW;
+        dz.is_active = true;
+        auto dz_handle = damage_zones.add(dz);
 
-//         Projectile proj {};
-//         proj.dz = dz_handle;
-//         proj.lifetime = 300;
+        Projectile proj {};
+        proj.dz = dz_handle;
+        proj.lifetime = 300;
 
-//         Array<Enemy_Distance> enemy_distances = find_nearest_enemies(player.pos, enemies);
-//         defer (enemy_distances.destroy());
+        Array<Enemy_Distance> enemy_distances = find_nearest_enemies(player.pos, enemies);
+        defer (enemy_distances.destroy());
 
-//         Vec2 shoot_dir {};
-//         if (enemy_distances.size() > 0) {
-//             int target_index = enemy_distances[0].enemy_pool_index;
-//             Enemy *target = enemies.get(target_index);
-//             assert(target);
-//             shoot_dir = normalize(target->pos - player.pos);
-//         } else {
-//             shoot_dir = random_unit_vec<2>();
-//         }
+        Vec2 shoot_dir {};
+        if (enemy_distances.size() > 0) {
+            int target_index = enemy_distances[0].enemy_pool_index;
+            Enemy *target = enemies.get(target_index);
+            assert(target);
+            shoot_dir = normalize(target->pos - player.pos);
+        } else {
+            shoot_dir = random_unit_vec<2>();
+        }
 
-//         proj.velocity = shoot_dir * 200;
+        proj.velocity = shoot_dir * 300;
 
-//         proj.acceleration = -shoot_dir * 500;
+        proj.acceleration = -shoot_dir * 500;
 
-//         projectiles.add(proj);
-//     }
+        projectiles.add(proj);
+    }
 
-// };
+    void spawn_particles(Vec2 pos) override {
+        Particle p {100, Vec3{1,1,0}, Vec3{1,1,0}};
+        p.position = pos;
+        p.rotation_speed = 100;
+        p.scaling = {2,2};
+        emitter.emit(p);
+    }
+
+    void draw() override {
+        emitter.draw();
+    }
+
+};
 
 // WARNING: don't instantiate this type, this is just for easily getting the biggest sizeof the derived Weapons
 union Weapon_Union {
     Whip whip;
     Bibles bibles;
     Magic_Wand magic_wand;
-    //Cross cross;
+    Cross cross;
     ~Weapon_Union() {} // we never instantiate Weapon_Union, but this is just to satisfy compiler
 };
 
