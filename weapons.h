@@ -281,12 +281,12 @@ struct Enemy_Distance {
     float health {};
 };
 
-int enemy_distance_comp(const void *a, const void *b) {
+inline int enemy_distance_comp(const void *a, const void *b) {
     return ((Enemy_Distance*)a)->dist - ((Enemy_Distance*)b)->dist;
 }
 
 // TODO: allocate result on a temp arena allocator somehow
-Array<Enemy_Distance> find_nearest_enemies(Vec2 player_pos, const Pool<Enemy> &enemies) {
+inline Array<Enemy_Distance> find_nearest_enemies(Vec2 player_pos, const Pool<Enemy> &enemies) {
 
     Array<Enemy_Distance> result {};
 
