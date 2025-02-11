@@ -43,6 +43,7 @@ struct Level {
         weapons.add(Bibles{3, damage_zones});
         weapons.add(Magic_Wand{damage_zones});
         weapons.add(Cross{});
+        weapons.add(Fire_Wand{});
     }
 
     void update_camera() {

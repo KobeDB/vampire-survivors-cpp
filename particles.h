@@ -28,6 +28,8 @@ struct Particle_Emitter {
     Pool<Particle> particles {1000};
     Texture2D texture;
 
+    Particle_Emitter() : texture{} {}
+
     Particle_Emitter(Texture2D texture) : texture{texture} {}
     Particle_Emitter(int max_particle_count, Texture2D texture) : particles{ max_particle_count }, texture{texture} {}
 
@@ -53,6 +55,8 @@ struct Particle_Emitter {
     }
 
     void draw() const {
+        if (texture.id == 0) { return; }
+
         for (int i = 0; i < particles.capacity(); ++i) {
             Particle *p = particles.get(i);
             if (!p) { continue; }

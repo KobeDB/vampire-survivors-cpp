@@ -22,4 +22,12 @@ inline Color to_rl_color(const Vec4 &color) {
     };
 }
 
+inline void draw_texture(Texture2D tex, Vec2 pos, float scale, float rotation = 0.0f) {
+    Rectangle src_rec = {0, 0, float(tex.width), float(tex.height)};
+    Vec2 dest_rec_dim = Vec2{50,50} * scale;
+    Rectangle dest_rec = {pos.x(), pos.y(), dest_rec_dim.x(), dest_rec_dim.y()};
+    Vec2 origin = dest_rec_dim / 2.0f;
+    DrawTexturePro(tex, src_rec, dest_rec, {origin.x(),origin.y()}, rotation, WHITE);
+}
+
 #endif

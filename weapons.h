@@ -187,12 +187,7 @@ struct Bibles : public Weapon {
         if (!is_cooling_down) {
             for (int i = 0; i < bible_count; ++i) {
                 Damage_Zone *bible = get(bibles[i]);
-                Texture2D tex = get_texture("bible");
-                Rectangle src_rec = {0, 0, tex.width, tex.height};
-                Vec2 dest_rec_dim = Vec2{50,50} * bible_scaling;
-                Vec2 dest_rec_pos = bible->pos - dest_rec_dim/2;
-                Rectangle dest_rec = {dest_rec_pos.x(), dest_rec_pos.y(), dest_rec_dim.x(), dest_rec_dim.y()};
-                DrawTexturePro(tex, src_rec, dest_rec, {}, 0, WHITE);
+                draw_texture(get_texture("bible"), bible->pos, bible_scaling);
             }
         }
     }
@@ -213,12 +208,14 @@ struct Projectile_Weapon : public Weapon {
     int ticks_until_next_shot {};
     int pending_shots {};
 
-    Particle_Emitter emitter;
-    int particle_spawn_interval;
+    Particle_Emitter emitter {};
+    int particle_spawn_interval {};
 
     // constants
     int shot_count {};
     int ticks_between_shots {};
+
+    Projectile_Weapon(int cooldown_time, int shot_count, int ticks_between_shots) : Weapon{cooldown_time, (shot_count-1)*ticks_between_shots}, shot_count{shot_count}, ticks_between_shots{ticks_between_shots} {}
 
     Projectile_Weapon(int cooldown_time, int shot_count, int ticks_between_shots, Texture2D particle_tex, int particle_spawn_interval) : Weapon{cooldown_time, (shot_count-1)*ticks_between_shots}, emitter{particle_tex}, particle_spawn_interval{particle_spawn_interval}, shot_count{shot_count}, ticks_between_shots{ticks_between_shots} {}
 
@@ -257,8 +254,10 @@ struct Projectile_Weapon : public Weapon {
             proj->rotation += proj->rotation_speed * TICK_TIME;
 
             // emit particles
-            if ((proj->lifetime % particle_spawn_interval) == 0) {
-                spawn_particles(dz->pos);
+            if (particle_spawn_interval != 0) {
+                if ((proj->lifetime % particle_spawn_interval) == 0) {
+                    spawn_particles(dz->pos);
+                }
             }
         }
 
@@ -412,12 +411,73 @@ struct Cross : public Projectile_Weapon {
 
 };
 
+#define FIRE_WAND_COOLDOWN 200
+#define FIRE_WAND_TICKS_BETWEEN_SHOTS 1
+
+struct Fire_Wand : public Projectile_Weapon {
+    Fire_Wand() : Projectile_Weapon{FIRE_WAND_COOLDOWN, 1, FIRE_WAND_TICKS_BETWEEN_SHOTS} {}
+
+    void fire_projectiles(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) override {
+
+        // shoot at random enemy
+        Array<int> living_enemies {};
+        defer (living_enemies.destroy());
+        for (int i = 0; i < enemies.capacity(); ++i) {
+            Enemy *enemy = enemies.get(i);
+            if (!enemy) { continue; }
+            living_enemies.push(i);
+        }
+
+        Vec2 shoot_dir {};
+        if (living_enemies.size() > 0) {
+            int target_index = random_int(0, living_enemies.size());
+            Enemy *target = enemies.get(target_index);
+            assert(target);
+            shoot_dir = normalize(target->pos - player.pos);
+        } else {
+            shoot_dir = random_unit_vec<2>();
+        }
+
+        Damage_Zone dz {};
+        dz.pos = player.pos;
+        dz.dim = {40, 40};
+        dz.damage = 50;
+        dz.color = ORANGE;
+        dz.is_active = true;
+        auto dz_handle = damage_zones.add(dz);
+
+        Projectile proj {};
+        proj.dz = dz_handle;
+        proj.lifetime = 300;
+        proj.velocity = shoot_dir * 300;
+        proj.rotation_speed = 200.0f;
+
+        projectiles.add(proj);
+    }
+
+    void spawn_particles(Vec2 pos) override {
+        // TODO
+    }
+
+    void draw() override {
+        emitter.draw();
+        for (int i = 0; i < projectiles.capacity(); ++i) {
+            Projectile *projectile = projectiles.get(i);
+            if (!projectile) { continue; }
+            Damage_Zone *dz = get(projectile->dz);
+            float scale = 1.0f;
+            draw_texture(get_texture("fireball"), dz->pos, scale, projectile->rotation);
+        }
+    }
+};
+
 // WARNING: don't instantiate this type, this is just for easily getting the biggest sizeof the derived Weapons
 union Weapon_Union {
     Whip whip;
     Bibles bibles;
     Magic_Wand magic_wand;
     Cross cross;
+    Fire_Wand fire_wand;
     ~Weapon_Union() {} // we never instantiate Weapon_Union, but this is just to satisfy compiler
 };
 

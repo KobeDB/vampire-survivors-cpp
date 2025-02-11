@@ -48,6 +48,13 @@ inline float random_float() {
     return (rand()/float(RAND_MAX)) * 2.0f - 1.0f;
 }
 
+// Returns a random integer in the range [min, max)
+// Make sure that min < max
+inline int random_int(int min, int max) {
+    assert(min < max && "min must be less than max");
+    return min + rand() % (max - min);
+}
+
 template <int N>
 struct Vec {
     float v[N] {};
