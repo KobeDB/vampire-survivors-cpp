@@ -118,6 +118,8 @@ struct Bibles : public Weapon {
     float revolutions_per_attack_period = 3;
     float radius = 100;
 
+    float bible_scaling = 1.0f;
+
     Particle_Emitter emitter {get_texture("bible")};
 
     Bibles(int bible_count, Pool<Damage_Zone> &damage_zones) : Weapon{BIBLES_COOLDOWN, BIBLES_LIFETIME}, bible_count{bible_count} {
@@ -131,11 +133,25 @@ struct Bibles : public Weapon {
     }
 
     void progress_attack(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) override {
+
+        // update bibles' damage zones
         for (int i = 0; i < bible_count; ++i) {
-            // Update bible's damage zone
             Damage_Zone *bible = get(bibles[i]);
             bible->pos = calc_bible_center(i, player.pos, remaining_ticks);
             bible->is_active = !is_cooling_down;
+        }
+
+        // update bible scaling
+        // bibles grow at the start of the attack and shrink at the end
+        float attack_progress = float(attack_time - remaining_ticks) / float(attack_time);
+        if (attack_progress < 0.1f) {
+            bible_scaling = attack_progress/0.1f;
+        }
+        else if (attack_progress > 0.9f) {
+            bible_scaling = (1.0f-attack_progress)/0.1f;
+        }
+        else {
+            bible_scaling = 1.0f;
         }
 
         // spawn particles
@@ -145,7 +161,7 @@ struct Bibles : public Weapon {
 
                 Particle p {20, Vec3{1,0,1}, Vec3{1,0,0}};
                 p.position = bible->pos;
-                p.scaling = {0.8,0.8};
+                p.scaling = Vec2{0.8,0.8} * bible_scaling;
                 Vec2 r = player.pos - bible->pos;
                 p.velocity = player.velocity + normalize(Vec2{-r.y(), r.x()}) * 10.0f;
 
@@ -168,6 +184,17 @@ struct Bibles : public Weapon {
 
     void draw() override {
         emitter.draw();
+        if (!is_cooling_down) {
+            for (int i = 0; i < bible_count; ++i) {
+                Damage_Zone *bible = get(bibles[i]);
+                Texture2D tex = get_texture("bible");
+                Rectangle src_rec = {0, 0, tex.width, tex.height};
+                Vec2 dest_rec_dim = Vec2{50,50} * bible_scaling;
+                Vec2 dest_rec_pos = bible->pos - dest_rec_dim/2;
+                Rectangle dest_rec = {dest_rec_pos.x(), dest_rec_pos.y(), dest_rec_dim.x(), dest_rec_dim.y()};
+                DrawTexturePro(tex, src_rec, dest_rec, {}, 0, WHITE);
+            }
+        }
     }
 };
 
