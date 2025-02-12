@@ -15,8 +15,9 @@
 int main() {
     printf("Hello there\n");
 
-    Vec2 screen_dim{ 1600, 900 };
-    //Vec2 screen_dim {1280, 720};
+    //Vec2 screen_dim{ 1600, 900 };
+    Vec2 screen_dim {1280, 720};
+    //Vec2 screen_dim {800,600};
 
     InitWindow(screen_dim.x(), screen_dim.y(), "raylib [core] example - basic window");
     SetTargetFPS(TICKS_PER_SECOND);
