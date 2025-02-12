@@ -96,6 +96,9 @@ struct Whip : public Weapon {
             p.position = dz->pos;
             p.flip_x = player.facing_dir.x() < 0;
             emitter.emit(p);
+
+            // Play slash sound
+            PlaySound(get_sound("swing"));
         }
 
         dz->is_active = !is_cooling_down;
@@ -400,6 +403,9 @@ struct Cross : public Projectile_Weapon {
         proj.acceleration = -shoot_dir * 500;
 
         projectiles.add(proj);
+
+        // play sound effect
+        PlaySound(get_sound("sword-unsheathe2"));
     }
 
     void spawn_particles(const Projectile &projectile) override {

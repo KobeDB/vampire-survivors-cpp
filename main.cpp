@@ -71,7 +71,7 @@ int main() {
         //
         // Update Music
         //
-        // UpdateMusicStream(music);
+        UpdateMusicStream(music);
 
         //
         // Draw

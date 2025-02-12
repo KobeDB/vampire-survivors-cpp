@@ -7,4 +7,6 @@ void load_resources();
 
 Texture2D get_texture(const char *name);
 
+Sound get_sound(const char *name);
+
 #endif
