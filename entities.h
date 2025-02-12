@@ -29,7 +29,7 @@ struct Player {
     void init() {
         pos = {10,10};
         dim = {75,75};
-        move_speed = 170;
+        move_speed = 250;
         facing_dir = {1,0};
         cur_level = 0;
         target_level = cur_level;
