@@ -29,14 +29,15 @@ struct Level {
     // Pool<XP_Drop>           xp_drops{MAX_XP_DROPS};
     // Wave                    wave{};
     // Pool<Countdown>         countdowns{MAX_COUNTDOWNS};
-    Quad_Tree<Enemy*> enemy_quad_tree {{0,0}, {3000,3000}, 7};
+    Vec2 quad_tree_dimensions {3000,3000};
+    Quad_Tree<Enemy*> enemy_quad_tree {{0,0}, quad_tree_dimensions, 5};
 
     void init(Vec2 screen_dim) {
         player.init();
 
         camera.target = {player.pos.x(), player.pos.y()};
         camera.offset = {screen_dim.x() / 2, screen_dim.y() / 2};
-        camera.zoom = 0.8f;
+        camera.zoom = 0.3f;
 
         for (int i = 0; i < MAX_ENEMIES; ++i) {
             enemies.add(make_enemy(Bat, player.pos + random_unit_vec<2>() * 1000));
@@ -74,7 +75,7 @@ struct Level {
 
         // (Re)build enemy quad tree
         // TODO: Center enemy quad tree around player and not around world origin
-        enemy_quad_tree.clear(); // first clear the tree from the last frame
+        enemy_quad_tree.reset(player.pos, quad_tree_dimensions); // first clear the tree from the last frame
         for (int ei = 0; ei < enemies.capacity(); ++ei) {
             auto enemy = enemies.get(ei);
             if (!enemy) { continue; }
@@ -120,10 +121,10 @@ struct Level {
     }
 
     void draw_enemy_quad_tree_bounds() {
-        float w = enemy_quad_tree.root_dimensions.x();
-        float h = enemy_quad_tree.root_dimensions.y();
-        float x = enemy_quad_tree.root_origin.x() - w/2.0f;
-        float y = enemy_quad_tree.root_origin.y() - h/2.0f;
+        float w = enemy_quad_tree.dimensions().x();
+        float h = enemy_quad_tree.dimensions().y();
+        float x = enemy_quad_tree.center().x() - w/2.0f;
+        float y = enemy_quad_tree.center().y() - h/2.0f;
         DrawRectangleLines(x, y, w, h, RED);
     }
 

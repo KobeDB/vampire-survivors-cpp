@@ -4,11 +4,20 @@
 #include "array.h"
 #include "math.h"
 
-#define QUAD_TREE_LEAF_MAX_ENTITIES 1000
+#define QUAD_TREE_LEAF_MAX_ENTITIES 5000
 template< typename T >
 struct Quad_Tree_Leaf {
     T entities[QUAD_TREE_LEAF_MAX_ENTITIES] {};
     int entity_count {};
+
+    void add_entity(const T &entity) {
+        if (entity_count >= QUAD_TREE_LEAF_MAX_ENTITIES) {
+            fprintf(stderr, "Quad_Tree_Leaf::add_entity: leaf entities array is full");
+            exit(1);
+        }
+        entities[entity_count] = entity;
+        ++entity_count;
+    }
 };
 
 template< typename T >
@@ -22,75 +31,73 @@ struct Quad_Tree_Node {
 template< typename T >
 struct Quad_Tree {
     Quad_Tree_Node<T> *root {};
-    Vec2 root_origin {};
-    Vec2 root_dimensions {};
     Array<Quad_Tree_Node<T>> quad_tree_nodes {};
     Array<Quad_Tree_Leaf<T>> quad_tree_leaves {};
     int levels {};
 
-    Quad_Tree(Vec2 origin, Vec2 dimensions, int levels) : root_origin{origin}, root_dimensions{dimensions}, levels{levels} {
+    Quad_Tree(Vec2 center, Vec2 dimensions, int levels) : levels{levels} {
+        if (levels < 1) {
+            fprintf(stderr, "Quad_Tree::Quad_Tree(): levels must be at least 1");
+            exit(1); // TODO: do something else than exiting the program
+        }
         quad_tree_nodes.reserve( (int) ceil((pow(4.0f,levels)-1.0f)/3.0f) );
         quad_tree_nodes.lock_capacity();
         quad_tree_leaves.reserve( (int) pow(4.0f, levels) );
         quad_tree_leaves.lock_capacity();
-        push_new_root_node();
+        push_new_root_node(center, dimensions);
     }
 
-    void push_new_root_node() {
+    void push_new_root_node(Vec2 center, Vec2 dimensions) {
         Quad_Tree_Node<T> root_node {};
-        root_node.center = root_origin;
-        root_node.dimensions = root_dimensions;
+        root_node.center = center;
+        root_node.dimensions = dimensions;
         root = quad_tree_nodes.push(root_node);
     }
 
-    void clear() {
+    // Clear the whole quad tree and re-orient the root node with given origin and dimensions
+    void reset(Vec2 center, Vec2 dimensions) {
         quad_tree_nodes.clear();
         quad_tree_leaves.clear();
-        push_new_root_node();
+        push_new_root_node(center, dimensions);
     }
 
     void add_entity_quad(const T &entity, Vec2 entity_pos, Vec2 entity_dim) {
         Vec2 half_dim = entity_dim/2.0f;
-        add_entity(entity, {entity_pos.x() + half_dim.x(), entity_pos.y() + half_dim.y()});
-        add_entity(entity, {entity_pos.x() + half_dim.x(), entity_pos.y() - half_dim.y()});
-        add_entity(entity, {entity_pos.x() - half_dim.x(), entity_pos.y() + half_dim.y()});
-        add_entity(entity, {entity_pos.x() - half_dim.x(), entity_pos.y() - half_dim.y()});
+        Quad_Tree_Leaf<T> *leaves[4] {};
+        leaves[0] = get_leaf({entity_pos.x() + half_dim.x(), entity_pos.y() + half_dim.y()});
+        leaves[1] = get_leaf({entity_pos.x() + half_dim.x(), entity_pos.y() - half_dim.y()});
+        leaves[2] = get_leaf({entity_pos.x() - half_dim.x(), entity_pos.y() + half_dim.y()});
+        leaves[3] = get_leaf({entity_pos.x() - half_dim.x(), entity_pos.y() - half_dim.y()});
+
+        for (int i = 0; i < 4; ++i) {
+            Quad_Tree_Leaf<T> *leaf = leaves[i];
+            if (!leaf) continue;
+            bool already_added_to_leaf = false;
+            for (int j = 0; j < i; ++j) {
+                if (leaves[j] == leaf) {
+                    already_added_to_leaf = true;
+                    break;
+                }
+            }
+            if (!already_added_to_leaf) {
+                leaf->add_entity(entity);
+            }
+        }
     }
 
-    void add_entity(const T &entity, Vec2 pos) {
-        bool in_bounds = pos_in_bounds(pos);
-        if (!in_bounds) { return; }
-        add_entity(root, entity, pos, 0);
+    // Returns null if pos is out of bounds
+    Quad_Tree_Leaf<T> *get_leaf(Vec2 pos) {
+        if (!pos_in_bounds(pos)) return nullptr;
+        return get_leaf(root, pos, 0);
     }
 
-    void add_entity(Quad_Tree_Node<T> *node, const T &entity, Vec2 pos, int level) {
-
+    Quad_Tree_Leaf<T> *get_leaf(Quad_Tree_Node<T> *node, Vec2 pos, int level) {
         // Leaf node base case
         if (level == levels-1) {
             if (!node->leaf) {
                 node->leaf = quad_tree_leaves.push(Quad_Tree_Leaf<T>{});
             }
-            if (node->leaf->entity_count >= QUAD_TREE_LEAF_MAX_ENTITIES) {
-                fprintf(stderr, "Quad_Tree::add_entity: leaf entities array is full");
-                exit(1);
-            }
-
-            // Search if entity already added in entities list
-            // TODO: this linear search is slow, seek alternative
-            bool found = false;
-            for (int i = 0; i < node->leaf->entity_count; ++i) {
-                if (entity == node->leaf->entities[i]) {
-                    found = true;
-                    break;
-                }
-            }
-
-            if (!found) {
-                node->leaf->entities[node->leaf->entity_count] = entity;
-                ++node->leaf->entity_count;
-            }
-
-            return;
+            return node->leaf;
         }
 
         // Internal node case
@@ -103,7 +110,7 @@ struct Quad_Tree {
             node->children[child_info.child_i] = quad_tree_nodes.push(child);
         }
 
-        add_entity(node->children[child_info.child_i], entity, pos, level+1);
+        return get_leaf(node->children[child_info.child_i], pos, level+1);
     }
 
     struct Search_Result {
@@ -113,42 +120,52 @@ struct Quad_Tree {
     Search_Result search(Vec2 pos, Vec2 dim) const {
         Search_Result result {};
         Vec2 half_dim = dim/2.0f;
-        result.leaves[0] = search({pos.x() + half_dim.x(), pos.y() + half_dim.y()});
-        result.leaves[1] = search({pos.x() + half_dim.x(), pos.y() - half_dim.y()});
-        result.leaves[2] = search({pos.x() - half_dim.x(), pos.y() + half_dim.y()});
-        result.leaves[3] = search({pos.x() - half_dim.x(), pos.y() - half_dim.y()});
+        result.leaves[0] = search(Vec2{pos.x() + half_dim.x(), pos.y() + half_dim.y()});
+        result.leaves[1] = search(Vec2{pos.x() + half_dim.x(), pos.y() - half_dim.y()});
+        result.leaves[2] = search(Vec2{pos.x() - half_dim.x(), pos.y() + half_dim.y()});
+        result.leaves[3] = search(Vec2{pos.x() - half_dim.x(), pos.y() - half_dim.y()});
         return result;
     }
 
     // Returns null if no enemies in pos's quadrant
     Quad_Tree_Leaf<T> *search(Vec2 pos) const {
-        Vec2 half_dim = root_dimensions/2.0f;
+        Vec2 half_dim = root->dimensions/2.0f;
         bool in_bounds = pos_in_bounds(pos);
-        if (!in_bounds) { return nullptr; }
+        if (!in_bounds) return nullptr; 
         return search(root, pos, 0);
     }
 
     // Returns null if no enemies in pos's quadrant
     Quad_Tree_Leaf<T> *search(Quad_Tree_Node<T> *node, Vec2 pos, int level) const {
         // Leaf node base case
-        if (level == levels-1) {
-            return node->leaf;
-        }
+        if (level == levels-1) return node->leaf;
 
         // Internal node case
         Child_Info child_info = get_child_info(node, pos);
 
-        if (!node->children[child_info.child_i]) { return nullptr; }
+        if (!node->children[child_info.child_i]) return nullptr;
 
         return search(node->children[child_info.child_i], pos, level+1);
     }
 
+    Vec2 center() const {
+        assert(quad_tree_nodes.size() > 0);
+        assert(root);
+        return root->center;
+    }
+
+    Vec2 dimensions() const {
+        assert(quad_tree_nodes.size() > 0);
+        assert(root);
+        return root->dimensions;
+    }
+
     bool pos_in_bounds(Vec2 pos) const {
-        Vec2 half_dim = root_dimensions/2.0f;
-        float root_x_min = root_origin.x() - half_dim.x();
-        float root_x_max = root_origin.x() + half_dim.x();
-        float root_y_min = root_origin.y() - half_dim.y();
-        float root_y_max = root_origin.y() + half_dim.y();
+        Vec2 half_dim = root->dimensions/2.0f;
+        float root_x_min = root->center.x() - half_dim.x();
+        float root_x_max = root->center.x() + half_dim.x();
+        float root_y_min = root->center.y() - half_dim.y();
+        float root_y_max = root->center.y() + half_dim.y();
         return pos.x() > root_x_min && pos.x() < root_x_max && pos.y() > root_y_min && pos.y() < root_y_max;
     }
 
