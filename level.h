@@ -29,7 +29,7 @@ struct Level {
     // Pool<XP_Drop>           xp_drops{MAX_XP_DROPS};
     // Wave                    wave{};
     // Pool<Countdown>         countdowns{MAX_COUNTDOWNS};
-    Quad_Tree<Enemy*> enemy_quad_tree {{0,0}, {3000,3000}, 8};
+    Quad_Tree<Enemy*> enemy_quad_tree {{0,0}, {3000,3000}, 7};
 
     void init(Vec2 screen_dim) {
         player.init();
@@ -91,7 +91,8 @@ struct Level {
 
             //if (!is_pos_in_view(e0->pos)) { continue; } // only handle collisions for enemies in view
 
-            auto search_result = enemy_quad_tree.search(e0->pos, e0->dim);
+            Vec2 influence_zone_dim = e0->dim * 2.0f;
+            auto search_result = enemy_quad_tree.search(e0->pos, influence_zone_dim);
 
             for (int l = 0; l < 4; ++l) {
                 Quad_Tree_Leaf<Enemy*> *leaf = search_result.leaves[l];
@@ -101,14 +102,11 @@ struct Level {
                     if (e0 == e1) { continue; }
 
                     float d = length(e1->pos - e0->pos);
-                    float thresh = 100.0f;
+                    float thresh = influence_zone_dim.x()/2.0f;
                     if (d < thresh && d > 0) {
-                        float repulsion = 0.5f * (1-d/thresh) * 100.0f;
+                        float repulsion = (1-d/thresh) * 10000.0f;
                         Vec2 e1_to_e0 = normalize(e0->pos - e1->pos);
-                        e0->velocity += repulsion * e1_to_e0;
-                        // if (length(e0->velocity) > 100.0f) {
-                        //     e0->velocity = normalize(e0->velocity) * 100.0f;
-                        // }
+                        e0->velocity += repulsion * e1_to_e0 * TICK_TIME;
                     }
                 }
             }

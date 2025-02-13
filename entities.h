@@ -111,7 +111,7 @@ inline Enemy make_enemy(Enemy_Type type, Vec2 pos) {
     switch (type) {
         case Bat: {
             result.dim = {40,40};
-            result.max_move_speed = 80;
+            result.max_move_speed = 100;
             result.health = 100;
             result.color = MAROON;
             result.animation.init(5, 8, get_texture("bat"), true);
