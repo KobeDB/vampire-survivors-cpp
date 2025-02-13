@@ -30,7 +30,7 @@ struct Level {
     // Wave                    wave{};
     // Pool<Countdown>         countdowns{MAX_COUNTDOWNS};
     Vec2 quad_tree_dimensions {3000,3000};
-    Quad_Tree<Enemy*> enemy_quad_tree {{0,0}, quad_tree_dimensions, 5};
+    Quad_Tree<Enemy*> enemy_quad_tree {{0,0}, quad_tree_dimensions, 6};
 
     void init(Vec2 screen_dim) {
         player.init();
@@ -132,11 +132,11 @@ struct Level {
         BeginMode2D(camera);
 
             // Draw grid
-            rlPushMatrix();
-            rlTranslatef(0, 25*50, 0);
-            rlRotatef(90, 1, 0, 0);
-            DrawGrid(100, 50);
-            rlPopMatrix();
+            // rlPushMatrix();
+            // rlTranslatef(0, 25*50, 0);
+            // rlRotatef(90, 1, 0, 0);
+            // DrawGrid(100, 50);
+            // rlPopMatrix();
 
             // Draw entities
             player.draw();
@@ -161,7 +161,7 @@ struct Level {
                 dz->draw();
             }
 
-            draw_enemy_quad_tree_bounds();
+            enemy_quad_tree.draw();
 
 
         EndMode2D();

@@ -169,6 +169,22 @@ struct Quad_Tree {
         return pos.x() > root_x_min && pos.x() < root_x_max && pos.y() > root_y_min && pos.y() < root_y_max;
     }
 
+    void draw() const {
+        draw(root);
+    }
+
+    void draw(const Quad_Tree_Node<T> *node) const {
+        if (!node) return;
+        float w = node->dimensions.x();
+        float h = node->dimensions.y();
+        float x = node->center.x() - w/2.0f;
+        float y = node->center.y() - h/2.0f;
+        DrawRectangleLines(x, y, w, h, RED);
+        for (int i = 0; i < 4; ++i) {
+            draw(node->children[i]);
+        }
+    }
+
     //
     // Helpers
     //
