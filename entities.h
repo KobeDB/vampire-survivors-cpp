@@ -77,30 +77,38 @@ struct Enemy {
     Vec2 force {};
     float max_move_speed {};
     float health {};
+    int flash_time = 0;
     Color color {};
     Animation animation {};
 
     void tick(const Player &player) {
-        Vec2 to_player = normalize(player.pos - pos);
 
-        Vec2 to_player_force = to_player * 500.0f;
-        force += to_player_force;
+        // Movement
+        {
+            Vec2 to_player = normalize(player.pos - pos);
 
-        // Apply resistance force to to_player_force based on how close the enemy is to its max_move_speed
-        // If the enemy's velocity towards the player has reached max_move_speed it'll stay at that speed 
-        float alpha = dot(velocity, to_player) / max_move_speed;
-        force += alpha * -to_player_force;
+            Vec2 to_player_force = to_player * 500.0f;
+            force += to_player_force;
 
-        // Apply friction on perpendicular axis to to_player axis
-        // This will prevent the enemies from permanently orbiting around the player
-        Vec2 to_player_perp = {-to_player.y(), to_player.x()};
-        Vec2 perp_velocity = to_player_perp * dot(velocity, to_player_perp);
-        Vec2 friction = -perp_velocity;
-        force += friction;
+            // Apply resistance force to to_player_force based on how close the enemy is to its max_move_speed
+            // If the enemy's velocity towards the player has reached max_move_speed it'll stay at that speed 
+            float alpha = dot(velocity, to_player) / max_move_speed;
+            force += alpha * -to_player_force;
 
-        velocity += force * TICK_TIME;
-        
-        pos += velocity * TICK_TIME;
+            // Apply friction on perpendicular axis to to_player axis
+            // This will prevent the enemies from permanently orbiting around the player
+            Vec2 to_player_perp = {-to_player.y(), to_player.x()};
+            Vec2 perp_velocity = to_player_perp * dot(velocity, to_player_perp);
+            Vec2 friction = -perp_velocity;
+            force += friction;
+
+            velocity += force * TICK_TIME;
+            
+            pos += velocity * TICK_TIME;
+        }
+
+        // animation stuff
+        flash_time -= 1;
 
         animation.tick();
     }
@@ -108,8 +116,20 @@ struct Enemy {
     void draw() const {
         Vec2 corner = pos - dim/2;
         DrawRectangleLines(corner.x(), corner.y(), dim.x(), dim.y(), RED);
-        animation.draw(pos, velocity.x() < 0);
-    }
+
+        static Shader flash_shader = {};
+        if (flash_shader.id == 0) flash_shader = get_shader("flash");
+
+        if (flash_time > 0) {
+            //animation.draw(pos, velocity.x() < 0, PINK);
+            // Shader flash_shader = get_shader("flash");
+            BeginShaderMode(flash_shader);
+            animation.draw(pos, velocity.x() < 0);
+            EndShaderMode();
+        } else {
+            animation.draw(pos, velocity.x() < 0);
+        }
+    }   
 };
 
 enum Enemy_Type {
@@ -124,7 +144,7 @@ inline Enemy make_enemy(Enemy_Type type, Vec2 pos) {
         case Bat: {
             result.dim = {40,40};
             result.max_move_speed = 100;
-            result.health = 100;
+            result.health = 500;
             result.color = MAROON;
             result.animation.init(5, 8, get_texture("bat"), true);
             result.animation.scaling = {2,2};

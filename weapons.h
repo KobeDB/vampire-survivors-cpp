@@ -445,13 +445,13 @@ struct Fire_Wand : public Projectile_Weapon {
         defer (living_enemies.destroy());
         for (int i = 0; i < enemies.capacity(); ++i) {
             Enemy *enemy = enemies.get(i);
-            if (!enemy) { continue; }
+            if (!enemy) continue;
             living_enemies.push(i);
         }
 
         Vec2 shoot_dir {};
         if (living_enemies.size() > 0) {
-            int target_index = random_int(0, living_enemies.size());
+            int target_index = living_enemies[random_int(0, living_enemies.size())];
             Enemy *target = enemies.get(target_index);
             assert(target);
             shoot_dir = normalize(target->pos - player.pos);

@@ -11,7 +11,7 @@
 #include "entities.h"
 #include "quad_tree.h"
 
-#define MAX_ENEMIES 5000
+#define MAX_ENEMIES 3000
 #define MAX_DAMAGE_ZONES 500
 #define MAX_WEAPONS 10
 #define MAX_DAMAGE_INDICATORS 10000
@@ -30,7 +30,7 @@ struct Level {
     // Wave                    wave{};
     // Pool<Countdown>         countdowns{MAX_COUNTDOWNS};
     Vec2 quad_tree_dimensions {3000,3000};
-    Quad_Tree<Enemy*> enemy_quad_tree {{0,0}, quad_tree_dimensions, 6};
+    Quad_Tree<Enemy*> enemy_quad_tree {{0,0}, quad_tree_dimensions, 5};
 
     void init(Vec2 screen_dim) {
         player.init();
@@ -68,7 +68,7 @@ struct Level {
         // Tick weapons
         for (int i = 0; i < weapons.capacity(); ++i) {
             Weapon *weapon = (Weapon*)weapons.get(i);
-            if (!weapon) { continue; }
+            if (!weapon) continue;
             weapon->tick(player, damage_zones, enemies);
         }
 
@@ -77,14 +77,14 @@ struct Level {
         enemy_quad_tree.reset(player.pos, quad_tree_dimensions); // first clear the tree from the last frame
         for (int ei = 0; ei < enemies.capacity(); ++ei) {
             auto enemy = enemies.get(ei);
-            if (!enemy) { continue; }
+            if (!enemy) continue;
             enemy_quad_tree.add_entity_quad(enemy, enemy->pos, enemy->dim);
         }
 
-        // Reset forces on enemies
+        // Reset enemy forces
         for (int ei = 0; ei < enemies.capacity(); ++ei) {
             auto enemy = enemies.get(ei);
-            if (!enemy) { continue; }
+            if (!enemy) continue;
             enemy->force = {0,0};
         }
 
@@ -93,9 +93,45 @@ struct Level {
         // Tick enemies
         for (int ei = 0; ei < enemies.capacity(); ++ei) {
             auto enemy = enemies.get(ei);
-            if (!enemy) { continue; }
+            if (!enemy) continue;
             enemy->tick(player);
         }
+
+        // Damage_Zone-Enemy collisions
+        for (int di = 0; di < damage_zones.capacity(); ++di) {
+            Damage_Zone *dz = damage_zones.get(di);
+            if (!dz) continue;
+            
+            if (!dz->is_active) continue;
+
+            auto search_result = enemy_quad_tree.search(dz->pos, dz->dim);
+            
+            for (int l = 0; l < 4; ++l) {
+                Quad_Tree_Leaf<Enemy*> *leaf = search_result.leaves[l];
+                if (!leaf) continue;
+                for (int j = 0; j < leaf->entity_count; ++j) {
+                    Enemy *e = leaf->entities[j];
+                    if (aabb_collision_check(dz->pos - dz->dim/2.0f, dz->dim, e->pos - e->dim/2.0f, e->dim)) {
+                        e->health -= dz->damage;
+                        e->flash_time = 10;
+                    }
+                }
+            }
+        }
+
+        // Free killed enemies
+        for (int i = 0; i < enemies.capacity(); ++i) {
+            Enemy *e = enemies.get(i);
+            if (!e) continue;
+            if (e->health <= 0) {
+                enemies.free(i);
+            }
+        }
+    }
+
+    bool aabb_collision_check(Vec2 pos0, Vec2 dim0, Vec2 pos1, Vec2 dim1) const {
+        return pos0.x() < pos1.x() + dim1.x() && pos0.x() + dim0.x() > pos1.x() 
+                && pos0.y() < pos1.y() + dim1.y() && pos0.y() + dim0.y() > pos1.y(); 
     }
 
     void separate_enemies() {
@@ -150,6 +186,15 @@ struct Level {
             // rlRotatef(90, 1, 0, 0);
             // DrawGrid(100, 50);
             // rlPopMatrix();
+
+            // Draw test rect
+            Vec2 rect_top_left = {100,200};
+            Vec2 rect_dim = {100, 300};
+            Color color = RED;
+            if (aabb_collision_check(player.pos - player.dim/2.0f, player.dim, rect_top_left, rect_dim)) {
+                color = GREEN;
+            }
+            DrawRectangle(rect_top_left.x(),rect_top_left.y(), rect_dim.x(), rect_dim.y(), color);
 
             // Draw entities
             player.draw();

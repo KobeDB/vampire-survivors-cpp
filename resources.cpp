@@ -50,14 +50,50 @@ void load_sounds() {
     load_sound("res/sounds/sword-unsheathe4.wav", "sword-unsheathe4");
     load_sound("res/sounds/sword-unsheathe3.wav", "sword-unsheathe3");
     load_sound("res/sounds/sword-unsheathe2.wav", "sword-unsheathe2");
-
+    load_sound("res/sounds/minecraft_hit.mp3", "enemy_hit");
 }
 
 Sound get_sound(const char *name) {
-    return sounds[std::string{name}];
+    std::string name_str {name};
+    if (sounds.find(name_str) == sounds.end()){
+        fprintf(stderr, "get_sound: sound %s not loaded\n", name);
+    }
+    return sounds[name_str];
 }
+
+//
+// Shaders
+//
+
+std::unordered_map<std::string, Shader> shaders {};
+
+void load_shader(const char *path, const char *name) {
+    auto shader = LoadShader(nullptr, path);
+    if (shader.id == 0) {
+        fprintf(stderr, "Couldn't load shader: %s\n", path);
+    }
+    shaders[std::string{name}] = shader;
+}
+
+void load_shaders() {
+    load_shader("res/shaders/flash.fs", "flash");
+}
+
+Shader get_shader(const char *name) {
+    std::string name_str {name};
+    if (shaders.find(name_str) == shaders.end()){
+        fprintf(stderr, "get_shader: shader %s not loaded\n", name);
+    }
+    return shaders[name_str];
+}
+
+//
+//
+//
 
 void load_resources() {
     load_textures();
     load_sounds();
+    load_shaders();
 }
+

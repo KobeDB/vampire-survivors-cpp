@@ -35,6 +35,10 @@ struct Animation {
     }
 
     void draw(Vec2 pos, bool flip_x) const {
+        draw(pos, flip_x, WHITE);
+    }
+
+    void draw(Vec2 pos, bool flip_x, Color color) const {
         auto frame_pos = Vec2{ frame * frame_width, 0 };
         auto frame_dim = Vec2{ frame_width, float(texture.height) };
         if (flip_x) { frame_dim.x() *= -1; }
@@ -47,7 +51,7 @@ struct Animation {
 
         auto dest_rec = Rectangle{ dest_rec_pos.x(), dest_rec_pos.y(), dest_rec_dim.x(), dest_rec_dim.y() };
 
-        DrawTexturePro(texture, frame_rec, dest_rec, {}, 0, WHITE);
+        DrawTexturePro(texture, frame_rec, dest_rec, {}, 0, color);
     }
 };
 
