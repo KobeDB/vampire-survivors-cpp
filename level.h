@@ -11,7 +11,7 @@
 #include "entities.h"
 #include "quad_tree.h"
 
-#define MAX_ENEMIES 3000
+#define MAX_ENEMIES 5000
 #define MAX_DAMAGE_ZONES 500
 #define MAX_WEAPONS 10
 #define MAX_DAMAGE_INDICATORS 10000
@@ -37,7 +37,7 @@ struct Level {
 
         camera.target = {player.pos.x(), player.pos.y()};
         camera.offset = {screen_dim.x() / 2, screen_dim.y() / 2};
-        camera.zoom = 0.3f;
+        camera.zoom = 0.5f;
 
         for (int i = 0; i < MAX_ENEMIES; ++i) {
             enemies.add(make_enemy(Bat, player.pos + random_unit_vec<2>() * 1000));
@@ -51,6 +51,12 @@ struct Level {
     }
 
     void update_camera() {
+        if (IsKeyDown(KEY_MINUS)) {
+            camera.zoom -= 0.2f * TICK_TIME;
+        }
+        if (IsKeyDown(KEY_EQUAL)) {
+            camera.zoom += 0.2f * TICK_TIME;
+        }
         camera.target = {player.pos.x(), player.pos.y()};
     }
 
@@ -66,15 +72,8 @@ struct Level {
             weapon->tick(player, damage_zones, enemies);
         }
 
-        // Tick enemies
-        for (int ei = 0; ei < enemies.capacity(); ++ei) {
-            auto enemy = enemies.get(ei);
-            if (!enemy) { continue; }
-            enemy->tick(player);
-        }
-
-        // (Re)build enemy quad tree
-        // TODO: Center enemy quad tree around player and not around world origin
+        //(Re)build enemy quad tree
+        //TODO: Center enemy quad tree around player and not around world origin
         enemy_quad_tree.reset(player.pos, quad_tree_dimensions); // first clear the tree from the last frame
         for (int ei = 0; ei < enemies.capacity(); ++ei) {
             auto enemy = enemies.get(ei);
@@ -82,7 +81,21 @@ struct Level {
             enemy_quad_tree.add_entity_quad(enemy, enemy->pos, enemy->dim);
         }
 
+        // Reset forces on enemies
+        for (int ei = 0; ei < enemies.capacity(); ++ei) {
+            auto enemy = enemies.get(ei);
+            if (!enemy) { continue; }
+            enemy->force = {0,0};
+        }
+
         separate_enemies();
+
+        // Tick enemies
+        for (int ei = 0; ei < enemies.capacity(); ++ei) {
+            auto enemy = enemies.get(ei);
+            if (!enemy) { continue; }
+            enemy->tick(player);
+        }
     }
 
     void separate_enemies() {
@@ -92,7 +105,7 @@ struct Level {
 
             //if (!is_pos_in_view(e0->pos)) { continue; } // only handle collisions for enemies in view
 
-            Vec2 influence_zone_dim = e0->dim * 2.0f;
+            Vec2 influence_zone_dim = e0->dim * 1.0f;
             auto search_result = enemy_quad_tree.search(e0->pos, influence_zone_dim);
 
             for (int l = 0; l < 4; ++l) {
@@ -107,7 +120,7 @@ struct Level {
                     if (d < thresh && d > 0) {
                         float repulsion = (1-d/thresh) * 10000.0f;
                         Vec2 e1_to_e0 = normalize(e0->pos - e1->pos);
-                        e0->velocity += repulsion * e1_to_e0 * TICK_TIME;
+                        e0->force += repulsion * e1_to_e0;
                     }
                 }
             }

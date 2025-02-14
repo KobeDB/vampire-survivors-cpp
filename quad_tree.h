@@ -4,7 +4,7 @@
 #include "array.h"
 #include "math.h"
 
-#define QUAD_TREE_LEAF_MAX_ENTITIES 5000
+#define QUAD_TREE_LEAF_MAX_ENTITIES 10000
 template< typename T >
 struct Quad_Tree_Leaf {
     T entities[QUAD_TREE_LEAF_MAX_ENTITIES] {};

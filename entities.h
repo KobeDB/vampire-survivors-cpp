@@ -74,20 +74,32 @@ struct Enemy {
     Vec2 pos {};
     Vec2 dim {};
     Vec2 velocity {};
+    Vec2 force {};
     float max_move_speed {};
     float health {};
     Color color {};
     Animation animation {};
 
     void tick(const Player &player) {
-        auto to_player = player.pos - pos;
-        velocity += to_player * 200 * TICK_TIME;
+        Vec2 to_player = normalize(player.pos - pos);
 
-        // Cap enemy's speed only if moving towards player
-        if (dot(velocity, to_player) > 0 && length(velocity) > max_move_speed) {
-            velocity = normalize(velocity) * max_move_speed;
-        }
+        Vec2 to_player_force = to_player * 500.0f;
+        force += to_player_force;
 
+        // Apply resistance force to to_player_force based on how close the enemy is to its max_move_speed
+        // If the enemy's velocity towards the player has reached max_move_speed it'll stay at that speed 
+        float alpha = dot(velocity, to_player) / max_move_speed;
+        force += alpha * -to_player_force;
+
+        // Apply friction on perpendicular axis to to_player axis
+        // This will prevent the enemies from permanently orbiting around the player
+        Vec2 to_player_perp = {-to_player.y(), to_player.x()};
+        Vec2 perp_velocity = to_player_perp * dot(velocity, to_player_perp);
+        Vec2 friction = -perp_velocity;
+        force += friction;
+
+        velocity += force * TICK_TIME;
+        
         pos += velocity * TICK_TIME;
 
         animation.tick();
