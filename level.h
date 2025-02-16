@@ -14,10 +14,16 @@
 #define MAX_ENEMIES 3000
 #define MAX_DAMAGE_ZONES 500
 #define MAX_WEAPONS 10
-#define MAX_DAMAGE_INDICATORS 10000
+#define MAX_DAMAGE_INDICATORS 100000
 #define MAX_XP_DROPS 10000
 #define MAX_COUNTDOWNS 1000
 
+struct Damage_Indicator {
+    Vec2 pos;
+    int damage;
+    bool critical_hit = false;
+    int lifetime = 10;
+};
 
 struct Level {
     Camera2D                camera {};
@@ -25,7 +31,7 @@ struct Level {
     Pool<Enemy>             enemies {MAX_ENEMIES};
     Pool<Damage_Zone>       damage_zones {MAX_DAMAGE_ZONES};
     Raw_Pool                weapons {MAX_WEAPONS, sizeof(Weapon_Union)};
-    // Pool<Damage_Indicator>  damage_indicators{MAX_DAMAGE_INDICATORS;
+    Pool<Damage_Indicator>  damage_indicators{MAX_DAMAGE_INDICATORS};
     // Pool<XP_Drop>           xp_drops{MAX_XP_DROPS};
     // Wave                    wave{};
     // Pool<Countdown>         countdowns{MAX_COUNTDOWNS};
@@ -66,42 +72,31 @@ struct Level {
         update_camera();
 
         // Tick weapons
-        for (int i = 0; i < weapons.capacity(); ++i) {
-            Weapon *weapon = (Weapon*)weapons.get(i);
-            if (!weapon) continue;
-            weapon->tick(player, damage_zones, enemies);
-        }
+        For_Pool(weapons, it, {
+            ((Weapon*)it)->tick(player, damage_zones, enemies);
+        });
 
         //(Re)build enemy quad tree
         //TODO: Center enemy quad tree around player and not around world origin
         enemy_quad_tree.reset(player.pos, quad_tree_dimensions); // first clear the tree from the last frame
-        for (int ei = 0; ei < enemies.capacity(); ++ei) {
-            auto enemy = enemies.get(ei);
-            if (!enemy) continue;
-            enemy_quad_tree.add_entity_quad(enemy, enemy->pos, enemy->dim);
-        }
+        For_Pool(enemies, it, {
+            enemy_quad_tree.add_entity_quad(it, it->pos, it->dim);
+        });
 
         // Reset enemy forces
-        for (int ei = 0; ei < enemies.capacity(); ++ei) {
-            auto enemy = enemies.get(ei);
-            if (!enemy) continue;
-            enemy->force = {0,0};
-        }
+        For_Pool(enemies, it, {
+            it->force = {0,0};
+        });
 
         separate_enemies();
 
-        // Tick enemies
-        for (int ei = 0; ei < enemies.capacity(); ++ei) {
-            auto enemy = enemies.get(ei);
-            if (!enemy) continue;
-            enemy->tick(player);
-        }
+        // tick enemies
+        For_Pool(enemies, it, {
+            it->tick(player);
+        });
 
         // Damage_Zone-Enemy collisions
-        for (int di = 0; di < damage_zones.capacity(); ++di) {
-            Damage_Zone *dz = damage_zones.get(di);
-            if (!dz) continue;
-            
+        For_Pool(damage_zones, dz, {
             if (!dz->is_active) continue;
 
             auto search_result = enemy_quad_tree.search(dz->pos, dz->dim);
@@ -114,19 +109,26 @@ struct Level {
                     if (aabb_collision_check(dz->pos - dz->dim/2.0f, dz->dim, e->pos - e->dim/2.0f, e->dim)) {
                         e->health -= dz->damage;
                         e->flash_time = 10;
+
+                        // damage indicator
+                        damage_indicators.add({e->pos, (int)dz->damage});
                     }
                 }
             }
-        }
+        });
 
-        // Free killed enemies
-        for (int i = 0; i < enemies.capacity(); ++i) {
-            Enemy *e = enemies.get(i);
-            if (!e) continue;
-            if (e->health <= 0) {
-                enemies.free(i);
+        // free killed enemies
+        For_Pool(enemies, it, {
+            if (it->health <= 0) enemies.free(it_i);
+        });
+
+        // tick damage indicators
+        For_Pool(damage_indicators, dz, {
+            dz->lifetime -= 1;
+            if (dz->lifetime <= 0) {
+                damage_indicators.free(dz_i);
             }
-        }
+        });
     }
 
     bool aabb_collision_check(Vec2 pos0, Vec2 dim0, Vec2 pos1, Vec2 dim1) const {
@@ -199,27 +201,21 @@ struct Level {
             // Draw entities
             player.draw();
 
-            for(int ei = 0; ei < enemies.capacity(); ++ei) {
-                auto enemy = enemies.get(ei);
-                if (!enemy) { continue; }
-                enemy->draw();
-            }
+            For_Pool(enemies, it, { it->draw(); });
 
-            // Draw weapons
-            for( int i = 0; i < weapons.capacity(); ++i) {
-                Weapon *weapon = (Weapon*)weapons.get(i);
-                if (!weapon) { continue; }
-                weapon->draw();
-            }
+            // draw weapons
+            For_Pool(weapons, it, { ((Weapon*)it)->draw(); });
 
-            // Draw damage zones (for debug purposes)
-            for( int di = 0; di < damage_zones.capacity(); ++di) {
-                auto dz = damage_zones.get(di);
-                if (!dz) { continue; }
-                dz->draw();
-            }
+            // draw damage zones (debug)
+            For_Pool(damage_zones, it, { it->draw(); });
 
             enemy_quad_tree.draw();
+
+            // draw damage indicators
+            For_Pool (damage_indicators, it, {
+                int dmg = it->damage;
+                DrawRectangle(it->pos.x(), it->pos.y(), 30, 10, ORANGE);
+            });
 
 
         EndMode2D();

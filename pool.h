@@ -193,6 +193,13 @@ inline void free(Pool_Handle<T> handle) {
     handle.pool->free(handle.index);
 }
 
+#define For_Pool(pool, iter, ...) \
+for (int iter##_i = 0, _cap=(pool).capacity(); iter##_i < _cap; ++iter##_i) { \
+    auto *iter = (pool).get(iter##_i); \
+    if (!iter) continue; \
+    __VA_ARGS__ \
+}
+
 // END Pool
 //------------------------------------------------------
 
