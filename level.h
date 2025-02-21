@@ -10,6 +10,7 @@
 #include "basic.h"
 #include "entities.h"
 #include "quad_tree.h"
+#include "my_raylib_helpers.h"
 
 #define MAX_ENEMIES 3000
 #define MAX_DAMAGE_ZONES 500
@@ -25,6 +26,25 @@ struct Damage_Indicator {
     int lifetime = 10;
 };
 
+struct XP_Drop {
+    int xp = 1;
+    Vec2 pos {};
+    Vec2 velocity {};
+    Color color = BLUE;
+    bool tracking_player = false;
+
+    void tick(const Player &player) {
+        if (tracking_player) {
+            velocity = normalize(player.pos - pos) * 500.0f;
+            pos += velocity * TICK_TIME;
+        }
+    }
+
+    void draw() {
+        draw_texture(get_texture("blue_gem"), pos, 0.6f, 0.0f);
+    }
+};
+
 struct Level {
     Camera2D                camera {};
     Player                  player {};
@@ -32,7 +52,7 @@ struct Level {
     Pool<Damage_Zone>       damage_zones {MAX_DAMAGE_ZONES};
     Raw_Pool                weapons {MAX_WEAPONS, sizeof(Weapon_Union)};
     Pool<Damage_Indicator>  damage_indicators{MAX_DAMAGE_INDICATORS};
-    // Pool<XP_Drop>           xp_drops{MAX_XP_DROPS};
+    Pool<XP_Drop>           xp_drops{MAX_XP_DROPS};
     // Wave                    wave{};
     // Pool<Countdown>         countdowns{MAX_COUNTDOWNS};
     Vec2 quad_tree_dimensions {3000,3000};
@@ -76,6 +96,11 @@ struct Level {
             ((Weapon*)it)->tick(player, damage_zones, enemies);
         });
 
+        // tick xp
+        For_Pool(xp_drops, it, {
+            it->tick(player);
+        });
+
         //(Re)build enemy quad tree
         //TODO: Center enemy quad tree around player and not around world origin
         enemy_quad_tree.reset(player.pos, quad_tree_dimensions); // first clear the tree from the last frame
@@ -117,9 +142,14 @@ struct Level {
             }
         });
 
-        // free killed enemies
+        // handle killed enemies
         For_Pool(enemies, it, {
-            if (it->health <= 0) enemies.free(it_i);
+            if (it->health <= 0) {
+                // spawn xp drop
+                xp_drops.add({1, it->pos, {}});
+                // finally, free enemy
+                enemies.free(it_i);
+            }
         });
 
         // tick damage indicators
@@ -129,6 +159,33 @@ struct Level {
                 damage_indicators.free(dz_i);
             }
         });
+
+        // pick up xp
+        For_Pool(xp_drops, it, {
+            // TODO: maybe query the nearby xp drops from a quad tree for efficiency
+            float dist_to_player = length(player.pos - it->pos);
+            if (dist_to_player < player.item_pick_up_range) {
+                it->tracking_player = true;
+            }
+
+            if (dist_to_player < player.dim.x()/2.0f) {
+                player.cur_xp += it->xp;
+                player.total_collected_xp += it->xp;
+                xp_drops.free(it_i);
+            }
+        });
+
+        // level up player
+        while (player.cur_xp >= player.req_xp) {
+            ++player.target_level;
+            player.cur_xp -= player.req_xp;
+            if (player.target_level < 20) {
+                player.req_xp += 10;
+            }
+            else if (player.target_level < 40) {
+                player.req_xp += 13;
+            }
+        }
     }
 
     bool aabb_collision_check(Vec2 pos0, Vec2 dim0, Vec2 pos1, Vec2 dim1) const {
@@ -206,6 +263,9 @@ struct Level {
             // draw weapons
             For_Pool(weapons, it, { ((Weapon*)it)->draw(); });
 
+            // draw xp
+            For_Pool(xp_drops, it, { it->draw(); });
+
             // draw damage zones (debug)
             For_Pool(damage_zones, it, { it->draw(); });
 
@@ -217,8 +277,13 @@ struct Level {
                 DrawRectangle(it->pos.x(), it->pos.y(), 30, 10, ORANGE);
             });
 
-
         EndMode2D();
+
+        // display player level
+        DrawText(TextFormat("Level: %d", player.cur_level), GetScreenWidth() - 100, 20, 22, GREEN);
+        DrawText(TextFormat("Target Level: %d", player.target_level), GetScreenWidth() - 200, 50, 22, GREEN);
+        DrawText(TextFormat("Total XP: %d", player.total_collected_xp), GetScreenWidth() - 200, 80, 22, GREEN);
+
     }
 };
 

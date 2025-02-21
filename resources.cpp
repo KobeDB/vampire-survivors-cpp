@@ -25,6 +25,7 @@ void load_textures() {
     load_texture("res/textures/flare.png", "flare");
     load_texture("res/textures/cross.png", "cross");
     load_texture("res/textures/fireball.png", "fireball");
+    load_texture("res/textures/blue_gem.png", "blue_gem");
 }
 
 Texture2D get_texture(const char *name) {

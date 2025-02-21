@@ -18,11 +18,14 @@ struct Player {
     Vec2 velocity {};
     Vec2 facing_dir {};
 
-    int cur_level {};
-    int target_level {};
+    float item_pick_up_range = 200.0f;
 
-    int req_xp {};
-    int cur_xp {};
+    int cur_level = 0;
+    int target_level = 0;
+
+    int req_xp = PLAYER_START_REQ_XP;
+    int cur_xp = 0;
+    int total_collected_xp = 0;
 
     Animation animation {};
 
@@ -31,10 +34,6 @@ struct Player {
         dim = {75,75};
         move_speed = 250;
         facing_dir = {1,0};
-        cur_level = 0;
-        target_level = cur_level;
-        req_xp = PLAYER_START_REQ_XP;
-        cur_xp = 0;
 
         animation.init(10, 6, get_texture("scarfy"), false);
     }
@@ -59,7 +58,9 @@ struct Player {
             move_dir = normalize(move_dir);
             animation.tick();
         }
-        velocity = move_dir * move_speed;
+        float actual_move_speed = move_speed;
+        if (IsKeyDown(KEY_LEFT_SHIFT)) actual_move_speed *= 3.0f;
+        velocity = move_dir * actual_move_speed;
         pos += velocity * TICK_TIME;
     }
 
