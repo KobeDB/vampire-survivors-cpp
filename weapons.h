@@ -289,9 +289,7 @@ inline int enemy_distance_comp(const void *a, const void *b) {
 }
 
 // TODO: allocate result on a temp arena allocator somehow
-inline Array<Enemy_Distance> find_nearest_enemies(Vec2 player_pos, const Pool<Enemy> &enemies) {
-
-    Array<Enemy_Distance> result {};
+inline void find_nearest_enemies(Array<Enemy_Distance> &result, Vec2 player_pos, const Pool<Enemy> &enemies) {
 
     for (int i = 0; i < enemies.capacity(); ++i) {
         Enemy *enemy = enemies.get(i);
@@ -302,8 +300,6 @@ inline Array<Enemy_Distance> find_nearest_enemies(Vec2 player_pos, const Pool<En
 
     // qsort safety: result is an array of POD Enemy_Distance elements so using qsort is fine.
     qsort(result.data(), result.size(), sizeof(result[0]), enemy_distance_comp);
-
-    return result;
 }
 // ---------------------
 
@@ -317,7 +313,8 @@ struct Magic_Wand : public Projectile_Weapon {
     Magic_Wand(Pool<Damage_Zone> &damage_zones) : Projectile_Weapon{MAGIC_WAND_COOLDOWN, 1, MAGIC_WAND_TICKS_BETWEEN_SHOTS, get_texture("flare"), 5} {}
 
     void fire_projectiles(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) override {
-        Array<Enemy_Distance> enemy_distances = find_nearest_enemies(player.pos, enemies);
+        Stack_Array<Enemy_Distance, 3000> enemy_distances {};
+        find_nearest_enemies(enemy_distances, player.pos, enemies);
         defer (enemy_distances.destroy());
         int targeted_enemy = 0; // index in enemy_distances array
 
@@ -385,7 +382,8 @@ struct Cross : public Projectile_Weapon {
         proj.lifetime = 300;
         proj.rotation_speed = 100;
 
-        Array<Enemy_Distance> enemy_distances = find_nearest_enemies(player.pos, enemies);
+        Stack_Array<Enemy_Distance, 3000> enemy_distances {};
+        find_nearest_enemies(enemy_distances, player.pos, enemies);
         defer (enemy_distances.destroy());
 
         Vec2 shoot_dir {};
@@ -441,7 +439,7 @@ struct Fire_Wand : public Projectile_Weapon {
     void fire_projectiles(const Player &player, Pool<Damage_Zone> &damage_zones, const Pool<Enemy> &enemies) override {
 
         // shoot at random enemy
-        Array<int> living_enemies {};
+        Stack_Array<int, 3000> living_enemies {};
         defer (living_enemies.destroy());
         for (int i = 0; i < enemies.capacity(); ++i) {
             Enemy *enemy = enemies.get(i);

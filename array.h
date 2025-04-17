@@ -12,6 +12,7 @@ struct Array {
     int m_size = 0;
     int m_capacity = 0;
     bool capacity_locked = false;
+    bool elements_heap_allocated = false;
 
     int size() const { return m_size; }
     int capacity() const { return m_capacity; }
@@ -49,6 +50,7 @@ struct Array {
         }
 
         unsigned char *new_elements = (unsigned char*)malloc(new_capacity * sizeof(T));
+        printf("mallocing to cap %d\n", new_capacity);
         assert(new_elements);
         // copy over elements to new buffer
         for (int i = 0; i < m_size; ++i) {
@@ -58,10 +60,12 @@ struct Array {
         // destruct elements in old buffer
         destruct_elements();
         // free old buffer
-        free(elements);
+        if (elements_heap_allocated)
+            free(elements);
 
         m_capacity = new_capacity;
         elements = new_elements;
+        elements_heap_allocated = true;
     }
 
     // In combination with reserve very convenient for using Array as a fixed size arena
@@ -82,7 +86,8 @@ struct Array {
     void destroy() {
         if (!elements) { return; }
         destruct_elements();
-        free(elements);
+        if (elements_heap_allocated)
+            free(elements);
         elements = nullptr;
         m_size = 0;
         m_capacity = 0;
@@ -125,6 +130,17 @@ struct Array {
         }
     }
 
+};
+
+template < typename T, int StackCap > 
+struct Stack_Array : public Array<T> {
+    alignas(alignof(T)) unsigned char stack_data[sizeof(T) * StackCap] {};
+    
+    Stack_Array() {
+        this->m_capacity = StackCap;
+        this->elements = stack_data;
+        this->elements_heap_allocated = false;
+    }
 
 };
 
